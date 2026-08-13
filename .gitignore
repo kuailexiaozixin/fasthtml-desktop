@@ -1,0 +1,23 @@
+# macOS system files
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editor
+.idea/
+.vscode/
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Logs
+*.log
+
+# Local venv
+.venv/
+venv/

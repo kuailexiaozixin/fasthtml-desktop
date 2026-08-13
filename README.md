@@ -1,8 +1,25 @@
 # fasthtml-desktop
 
-**FastHTML + pywebview** 桌面应用的全生命周期 AI 技能（Agent Skill）。从需求澄清、FastHTML Web 开发、pywebview 桌面壳包装到 PyInstaller 打包交付，最终交付物是包含 **pywebview 原生窗口**的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![skills.sh](https://skills.sh/b/kuailexiaozixin/fasthtml-desktop)](https://skills.sh/kuailexiaozixin/fasthtml-desktop)
 
-> 本技能以 `SKILL.md` 为入口，面向 AI Agent（如 Claude / 灵犀等支持 AgentSkills 规范的助手）。AI 读取后即可按标准化流程辅助开发 FastHTML 桌面应用。
+**FastHTML + pywebview** 桌面应用的全生命周期 **Agent Skill**——从需求澄清、FastHTML Web 开发、pywebview 桌面壳包装到 PyInstaller 打包交付，最终交付物是包含 **pywebview 原生窗口**的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
+
+> **Agent Skill 是什么？** Skill 是「指令 + 脚本 + 资源」的文件夹，AI Agent 会动态发现并加载它，以在特定任务上表现得更好。本仓库遵循 [Agent Skills 开放标准](https://agentskills.io)——**一次编写，处处使用**，可被 Claude、灵犀、Codex 等支持该标准的助手直接读取。
+
+---
+
+## 这是什么
+
+本技能为 AI Agent 提供一套**标准化、可复现**的 FastHTML 桌面应用开发流程，用 Web 技术栈做出带原生窗口的桌面程序：
+
+- **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
+- **权威文档 HARD-GATE**：`references/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
+- **20+ 参考实现**：`examples/` 覆盖 CRM、ERP、HRM、财务、进销存、法律、文档、表单等真实业务场景
+- **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
+- **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
+
+适合：需要现代 Web 界面、又希望以**原生桌面应用**交付的业务系统。
 
 ---
 
@@ -18,14 +35,20 @@
 
 ---
 
-## 特性
+## 安装 / 使用
 
-- **Web 技术栈做桌面**：用 HTML/FastHTML/HTMX 构建界面，pywebview 提供原生窗口
-- **HARD-GATE 权威文档**：`references/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写代码前必读
-- **20+ 参考实现**：`examples/` 覆盖 CRM、ERP、HRM、财务、进销存、法律、文档、表单等真实业务场景
-- **完整质量门禁**：路由联动检查（`check_routes_linkage.py`）、引用检查（`check_refs.sh`）、无头 UI 验证、release gate
-- **统一脚手架**：`templates/` 一键生成项目（含 `启动.bat` 双用途 README 启动器）
-- **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
+Agent Skills 通常已内置在支持该标准的助手中；也可将本仓库添加为 **Skill / Plugin**：
+
+```bash
+# 以支持 AgentSkills 的助手为例（如 Claude Code）
+/plugin marketplace add kuailexiaozixin/fasthtml-desktop
+```
+
+安装后，只需对助手说一句，例如：
+
+> 「用 fasthtml-desktop 技能，帮我做一个带 Web 界面的客户管理桌面程序，打包成 EXE。」
+
+助手会读取 `SKILL.md`，按其中的工作流与铁律自动完成从脚手架到打包的完整链路。
 
 ---
 
@@ -35,6 +58,8 @@
 fasthtml-desktop/
 ├── SKILL.md              # 技能主入口（工作流 + 铁律）
 ├── CHANGELOG.md          # 版本变更记录
+├── LICENSE               # MIT 许可证
+├── README.md             # 本文件
 ├── references/           # 深度参考（架构、模块设计、打包、TDD、集成模式等）
 │   └── fasthtml-refs/    # FastHTML 官方上下文转档（写码前必读）
 ├── examples/             # 20+ 参考实现（优先参考）
@@ -64,10 +89,21 @@ fasthtml-desktop/
 
 ---
 
-## 许可与来源
+## 贡献
 
-- 由 AI Agent 按 AgentSkills 规范创建并维护，`author: agent`
-- 开源用于学习与二次开发，欢迎提交 Issue / PR 完善工作流
+欢迎提交 Issue 与 PR 完善工作流。请遵循：
+
+- 改动技能核心逻辑时，同步更新 `SKILL.md`、`references/` 与 `CHANGELOG.md`
+- 新增参考实现请放入 `examples/`，并登记到 `examples/README.md`
+- 保持「权威文档 HARD-GATE + 质量门禁 + 跨平台构建」的铁律不被破坏
+
+详见 [contributing.md](contributing.md)。
+
+---
+
+## 许可证
+
+[MIT](LICENSE) © kuailexiaozixin
 
 ---
 
