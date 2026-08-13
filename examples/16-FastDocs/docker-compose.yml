@@ -1,0 +1,20 @@
+services:
+  fastdocs:
+    build: .
+    ports:
+      - "5016:5016"
+    environment:
+      - FASTDOCS_DB=/data/fastdocs.sqlite
+      - FASTDOCS_PORT=5016
+      # Pass AI config through from your shell / .env if you want generation + chat:
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-xai}
+      - MODEL_NAME=${MODEL_NAME:-grok-4-1-fast-reasoning}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    volumes:
+      - fastdocs-data:/data
+
+volumes:
+  fastdocs-data:

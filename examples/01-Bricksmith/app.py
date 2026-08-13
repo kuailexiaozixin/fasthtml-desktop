@@ -1,0 +1,50 @@
+"""Bricksmith — FastHTML app.
+
+Single process, two route groups:
+  - /                 marketing landing (landing/routes.py)
+  - /app/*            3-pane chat product (chat/routes.py)
+"""
+
+from __future__ import annotations
+
+from fasthtml.common import fast_app
+
+from utils.config import settings
+
+app, rt = fast_app(
+    live=False,
+    static_path=".",
+    pico=False,
+    secret_key=settings().app_secret,
+    htmx=True,
+)
+
+# Route modules register their handlers against `rt`. Importing for side effects.
+from landing import routes as _landing_routes  # noqa: E402,F401
+from chat import routes as _chat_routes  # noqa: E402,F401
+from chat import pipeline as _pipeline_routes  # noqa: E402,F401
+from chat import instructions as _instructions_routes  # noqa: E402,F401
+from chat import analytics as _analytics_routes  # noqa: E402,F401
+
+# Desktop / SQLite: make sure the on-disk schema exists before the server
+# answers any request. `migrate()` is idempotent (every DDL statement uses
+# IF NOT EXISTS and prompt seeding is guarded by a COUNT), so it only does real
+# work when the database file is missing — subsequent launches are free.
+from db import db_path as _db_path
+from db import migrate as _migrate
+
+if not _db_path().exists():
+    _migrate.migrate()
+
+
+def _serve_default():
+    # Call uvicorn directly rather than FastHTML's `serve()`, which relies on
+    # stack-walking to find the caller's module name — fragile when launched
+    # via `main.py`, and silently exits 0 without starting the server.
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=settings().port)
+
+
+if __name__ == "__main__":
+    _serve_default()

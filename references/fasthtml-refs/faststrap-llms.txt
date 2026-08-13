@@ -1,0 +1,81 @@
+# FastStrap - LLM Context
+
+FastStrap is a Python component library for FastHTML that provides 93 UI components (from `faststrap.components`) plus layouts, accessibility helpers, presets, SEO helpers, and PWA tooling.
+
+## Overview
+
+- Version: VCS-derived at runtime (see `faststrap.__version__`)
+- License: MIT
+- Python: 3.10+
+- Dependency: python-fasthtml>=0.6.0
+
+## Bootstrap Setup
+
+```python
+from fasthtml.common import FastHTML
+from faststrap import add_bootstrap
+
+app = FastHTML()
+add_bootstrap(app)  # Adds Bootstrap 5.3 CSS/JS + Bootstrap Icons
+```
+
+## Themes
+
+Built-in themes (use with `add_bootstrap(app, theme=...)`):
+- green-nature
+- blue-ocean
+- purple-magic
+- red-alert
+- orange-sunset
+- teal-oasis
+- indigo-night
+- pink-love
+- cyan-sky
+- gray-mist
+
+Theme modes: `mode="light" | "dark" | "auto"`.
+
+## Component Catalog (93 total)
+
+### Forms (20)
+Button, ButtonGroup, ButtonToolbar, Checkbox, CloseButton, FileInput, FloatingLabel, Form, FormGroup, FormGroupFromErrors, Input, InputGroup, InputGroupText, Radio, Range, SearchableSelect, Select, Switch, ThemeToggle, ToggleGroup
+
+### Display (17)
+Badge, Card, Carousel, CarouselItem, EmptyState, Figure, Image, MapView, Markdown, Sheet, StatCard, Table, THead, TBody, TRow, TCell, TextClamp
+
+### Feedback (23)
+Alert, ConfirmDialog, ErrorDialog, ErrorPage, ErrorToast, InfoToast, InstallPrompt, Modal, NoticeAlert, NoticeToast, Placeholder, PlaceholderButton, PlaceholderCard, Popover, Progress, ProgressBar, SimpleToast, Spinner, SuccessToast, Toast, ToastContainer, Tooltip, WarningToast
+
+### Navigation (21)
+Accordion, AccordionItem, BottomNav, BottomNavItem, Breadcrumb, Collapse, Drawer, Dropdown, DropdownDivider, DropdownItem, GlassNavbar, GlassNavItem, ListGroup, ListGroupItem, Navbar, Pagination, Scrollspy, SidebarNavbar, SidebarNavItem, TabPane, Tabs
+
+### Layout (4)
+Container, Row, Col, Hero
+
+### Patterns (8)
+Feature, FeatureGrid, FooterModern, NavbarModern, PricingGroup, PricingTier, Testimonial, TestimonialSection
+
+## Layouts (Composed)
+AuthLayout, DashboardLayout, LandingLayout
+
+## Accessibility Helpers
+SkipLink, LiveRegion, VisuallyHidden, FocusTrap
+
+## Presets (HTMX helpers, 14)
+ActiveSearch, InfiniteScroll, AutoRefresh, LazyLoad, LoadingButton, OptimisticAction, LocationAction, hx_redirect, hx_refresh, hx_trigger, hx_reswap, hx_retarget, toast_response, require_auth
+
+## SEO Helpers
+SEO, PageMeta, StructuredData
+
+## PWA
+add_pwa, PwaMeta
+
+## Utilities
+Icon, Fx, merge_classes, set_component_defaults, reset_component_defaults, resolve_defaults
+
+## Notes
+
+- All components accept `**kwargs` for HTML and HTMX attributes (`hx_*`, `data_*`, `aria_*`).
+- `Button(..., href=...)` renders as an anchor automatically.
+- Some components require Bootstrap JS for interactivity: Accordion, Collapse, Dropdown, Modal, Offcanvas/Drawer, Popover, Tooltip, Tabs, Toast, Carousel, Scrollspy.
+- `Form.from_pydantic(...)` and `Table.from_df(...)` are beta helpers for data bridges.

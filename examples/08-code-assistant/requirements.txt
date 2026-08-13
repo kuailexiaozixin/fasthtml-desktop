@@ -1,0 +1,26 @@
+# 桌面壳运行时依赖（覆盖/约束上游 pyproject.toml 的版本，使其能在 Python 3.13 上直接装 wheel，
+# 避免 tiktoken/tokenizers 从源码编译 Rust 扩展）。
+--only-binary tiktoken
+--only-binary tokenizers
+
+ast-grep-py>=0.26.3
+astra-assistants==2.1.0.27
+python-fasthtml==0.5.1
+fastcore==1.7.4
+fastlite==0.0.10
+sqlite-minutils==3.37.0.post3
+starlette==0.38.2
+uvicorn==0.30.6
+python-dotenv
+pywebview>=5.0
+pythonnet>=3.0 ; sys_platform == "win32"
+httpx==0.27.2
+
+# 约束 litellm/openai 到与 astra-assistants 2.1.0.27 兼容且 Python 3.13 可直接跑 wheel 的版本
+litellm==1.44.13
+openai==1.43.0
+tiktoken==0.9.0
+tokenizers==0.21.0
+
+# Python 3.13 已移除 imghdr，litellm 1.44.13 仍引用它，需兼容性 shim
+standard-imghdr ; python_version >= "3.13"

@@ -1,0 +1,20 @@
+python-fasthtml
+monsterui
+python-dotenv
+sqlalchemy
+bcrypt
+langchain-core
+uvicorn
+python-multipart
+httpx
+pywebview
+# 说明 1：上游依赖 psycopg2-binary（PostgreSQL 驱动）。桌面示例已把 db.py 改为
+# SQLite 后端（零外部服务、双击即跑），故移除该驱动。若要还原上游 PostgreSQL 行为，
+# 自行 pip install psycopg2-binary 并设置 DB_URL=postgresql://...
+#
+# 说明 2：LLM 供应商 SDK 在 llm.py 中是**函数内懒加载**（get_chat_model 内才 import），
+# 业务功能（登录/项目/审阅/工作流）完全不需要。为免离线首启被迫拉取重型依赖树，
+# 这里不列为必需项。要用 AI 助手时按需装其一并配好对应 API Key：
+#   pip install langchain-openai          # gpt-* / o3 / o4（OPENAI_API_KEY）
+#   pip install langchain-anthropic       # claude-*（ANTHROPIC_API_KEY）
+#   pip install langchain-google-genai    # gemini-*（GOOGLE_API_KEY）

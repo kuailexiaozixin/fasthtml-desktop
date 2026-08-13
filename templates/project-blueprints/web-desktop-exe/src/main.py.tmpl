@@ -1,0 +1,103 @@
+"""main.py — 入口文件（pywebview + uvicorn）
+
+此文件是共享模板的蓝图副本，与 templates/shared/main.py 保持同步。
+生成后通常不需要修改。
+
+使用方式：
+  蓝图（bootstrap 生成新项目）：此文件作为模板 src/main.py.tmpl
+  示例（现有项目）：从 templates/shared/main.py 同步后替换 __APP_TITLE__
+
+注意：此文件与 templates/shared/main.py 内容保持同步。
+如需修改入口逻辑，请先修改 shared/main.py，再运行 sync_examples.sh。
+"""
+import sys, os, uvicorn, webview, threading, socket, signal
+from pathlib import Path
+
+if getattr(sys, 'frozen', False):
+    # 只读资源基目录：--add-data 解包到 _MEIPASS（onefile 临时目录，不可写）
+    RESOURCE_DIR = Path(sys._MEIPASS)
+    # 可写数据基目录：EXE 同级目录（onefile 下 _MEIPASS 为只读临时目录，绝不能写数据到此处）
+    DATA_DIR = Path(sys.executable).parent
+    # 业务代码在资源基目录的 src/ 下（--add-data "src;src" → _MEIPASS/src）
+    _src = str(RESOURCE_DIR / "src")
+else:
+    RESOURCE_DIR = Path(__file__).parent
+    DATA_DIR = Path(__file__).parent
+    # 开发态：main.py 即位于 src/ 下，src 本身即为包根（避免拼出 src/src 导致导入失败）
+    _src = str(Path(__file__).parent)
+
+if _src not in sys.path:
+    sys.path.insert(0, _src)
+
+
+def wait_for_server(url: str, timeout: int = 30) -> bool:
+    import requests
+    for _ in range(timeout):
+        try:
+            requests.get(url, timeout=1)
+            return True
+        except requests.RequestException:
+            import time
+            time.sleep(1)
+    return False
+
+
+def find_free_port(start: int = 5001, end: int = 6000) -> int:
+    for port in range(start, end):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', port)) != 0:
+                return port
+    raise RuntimeError("未找到可用端口")
+
+
+def start() -> None:
+    PORT = int(os.environ.get("PORT", 0)) or find_free_port()
+    print(f"[OK] 服务启动：http://127.0.0.1:{PORT}")
+    print("[INFO] 关闭窗口或按 Ctrl+C 退出")
+
+    _server_instance = None
+    def _cleanup(*args):
+        if _server_instance:
+            _server_instance.should_exit = True
+        print("[INFO] 正在退出...")
+        os._exit(0)
+    signal.signal(signal.SIGINT, _cleanup)
+
+    try:
+        from app import app
+    except ImportError:
+        import importlib
+        # 查找包含 app.py 的子包（而非取第一个字母序子目录）
+        _src_dir = _src
+        _pkg = None
+        for _p in os.listdir(_src_dir):
+            _pkg_path = _src_dir / _p
+            if _pkg_path.is_dir() and not _p.startswith("_"):
+                if (_pkg_path / "app.py").exists():
+                    _pkg = _p
+                    break
+        if _pkg:
+            _mod = importlib.import_module(f"{_pkg}.app")
+            app = getattr(_mod, "app")
+        else:
+            raise ImportError("未找到 app 模块：检查 src/ 下是否存在 app.py 或 <pkg>/app.py")
+
+    _config = uvicorn.Config(app, host="127.0.0.1", port=PORT, reload=False)
+    _server_instance = uvicorn.Server(_config)
+    threading.Thread(target=_server_instance.run, daemon=True).start()
+
+    if not wait_for_server(f"http://127.0.0.1:{PORT}"):
+        print("[WARN] 服务启动超时，仍尝试打开窗口")
+
+    if os.environ.get("SERVER_ONLY") == "1":
+        # Headless / CI mode: run HTTP server only, no desktop window
+        print("[INFO] SERVER_ONLY mode: HTTP server running. Press Ctrl+C to stop.")
+        _server_instance.run()
+        return
+
+    webview.create_window("{{APP_NAME}}", f"http://127.0.0.1:{PORT}")
+    webview.start()
+
+
+if __name__ == "__main__":
+    start()

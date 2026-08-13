@@ -1,0 +1,4 @@
+{
+  "app_name": "Devon Traffic Insights",
+  "startup_note": "提示：本示例为纯合成数据的只读看板 —— 无数据库、无需注册登录、无需任何 API Key，双击即可查看全部六个分析页面。\n    首次启动会生成约 2.3 万条合成观测数据（数秒），并把 plotly.js 从已安装的 plotly 包缓存到 vendor/ 目录，之后完全离线可用。"
+}

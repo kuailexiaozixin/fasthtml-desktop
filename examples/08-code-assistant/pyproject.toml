@@ -1,0 +1,21 @@
+[project]
+name = "code-assistant"
+version = "0.1.1"
+description = "A FastHTML app that builds FastHTML apps"
+authors = [{ name = "phact", email = "estevezsebastian@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ast-grep-py>=0.26.3",
+    "astra-assistants>=2.1.0.27",
+    "python-fasthtml>=0.5.1",
+]
+
+[project.scripts]
+ca = "code_assistant:app"
+code-assistant = "code_assistant.code_assistant:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+

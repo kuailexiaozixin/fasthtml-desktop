@@ -1,0 +1,77 @@
+# {{APP_NAME}}
+
+> FastHTML + pywebview 桌面应用。最终交付物：单文件 Windows EXE（双击即用）。
+
+本 README 具备**双重用途**：
+- **用途一 · 用户使用说明书**：给最终用户，讲怎么装、怎么启动、怎么退出。
+- **用途二 · LLM 克隆说明书**：给 LLM，含目录树 / 入口约定 / 依赖 / 打包要点，可对照克隆出一模一样的应用。
+
+---
+
+## 用途一：用户使用说明书
+
+### 一键启动（双击即用，无需终端、无需手动装环境）
+直接**双击 `启动.bat`**：
+1. 首次运行自动定位 Python → 创建 `.venv` → 安装依赖 → 弹出桌面窗口；
+2. 之后每次双击直接启动。
+
+```bat
+启动.bat            # 双击：自动建环境 → 装依赖 → 弹桌面窗口
+启动.bat server     # 可选：仅启动本地 HTTP 服务（无头 / CI 模式，不建窗口）
+```
+
+> ⚠️ 注意：`.py` 文件（main.py / start.py 等）双击默认会用编辑器打开、**不会运行**。用户入口统一是 **`启动.bat`**；`start.py` 等仅供开发者在终端使用（质量门禁、无头调试）。
+
+### 退出方式
+关闭桌面窗口，或在控制台按 `Ctrl+C`。
+
+### 打包（开发者 / 重新分发）
+由开发者用 PyInstaller 打包为单文件 EXE（见下方「用途二 · 打包要点」）。普通用户无需打包，双击 `启动.bat` 即可使用。
+
+---
+
+## 用途二：LLM 克隆说明书
+
+### 技术栈（锁死）
+- **Web 框架**：FastHTML（`pip install python-fasthtml`，导入名 `fasthtml`），服务端渲染，无静态 HTML 入口
+- **桌面壳**：pywebview（Windows=Edge WebView2，依赖 `clr` / `pythonnet`）
+- **服务器**：uvicorn（`reload=False`，打包禁用 `serve()`）
+- **打包**：PyInstaller `--onefile --noupx --console` 单文件 EXE
+
+### 目录结构（脚手架默认产出）
+```
+{{APP_NAME}}/
+├── 启动.bat                      # 一键启动器（用户入口，双击即用）
+├── requirements.txt              # 运行依赖（启动.bat 自动 pip 安装）
+├── pyproject.toml               # 项目配置（uv 开发用）
+├── .env.example                 # 配置样例（PORT 等）
+├── .gitignore
+├── src/
+│   ├── main.py                  # pywebview + uvicorn 入口（不动）
+│   ├── app.py                   # 业务逻辑（在这里写页面 / 路由）
+│   ├── __init__.py
+│   └── pyinstaller_hooks/       # 打包钩子
+├── tests/                       # pytest 测试
+└── data/                        # 运行时可写数据（SQLite 等，.gitkeep）
+```
+
+### 入口约定
+- `src/main.py`：双运行时壳。`sys.frozen` 检测 → 冻结态 `RESOURCE_DIR=_MEIPASS`（只读）、`DATA_DIR=<exe 同级>`（可写）；开发态二者均为文件目录。先 `find_free_port()` 探测端口，`wait_for_server()` 避免白屏，再 `webview.create_window()`。
+- `SERVER_ONLY=1`（即 `启动.bat server`）→ 仅前台跑 uvicorn，不建窗口（无头 / CI）。
+- `src/app.py`：FastHTML `fast_app()` 实例，含全部页面与路由。
+
+### 依赖
+`requirements.txt`：
+```
+python-fasthtml>=0.6.0
+pywebview>=5.0
+pythonnet>=3.0
+uvicorn>=0.30
+```
+
+### 打包要点（开发者重新分发时）
+- 最小 venv + `--onefile --noupx --console`；`--collect-submodules fasthtml`；pywebview 6.2.1 自带 hook 自动收集 `webview/lib`，无需手动 `--add-data`。
+- Windows hidden-import：`clr` + `webview.platforms.winforms` + `webview.platforms.edgechromium`。
+- 函数内懒加载模块须显式 `--hidden-import`。
+- 构建后必须冒烟：启动 EXE → HTTP 200 → 窗口句柄存在 → （若有后台子进程）业务健康端点可达。
+- 详细见技能 `references/08-packaging.md` 与 `references/11-cross-platform.md`。

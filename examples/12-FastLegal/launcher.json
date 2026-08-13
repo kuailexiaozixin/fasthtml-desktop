@@ -1,0 +1,5 @@
+{
+  "app_name": "FastLegal",
+  "entry": "desktop.py",
+  "startup_note": "[提示] AI 助手需按需安装 LLM SDK 并配 Key（三选一）：langchain-openai / langchain-anthropic / langchain-google-genai；未装时业务功能不受影响，仅助手页发起对话会报错。"
+}

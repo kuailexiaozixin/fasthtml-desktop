@@ -1,0 +1,20 @@
+services:
+  fastmeet:
+    build: .
+    ports:
+      - "5015:5015"
+    environment:
+      FASTMEET_DB: /data/fastmeet.sqlite
+      FASTMEET_PORT: "5015"
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-xai}
+      MODEL_NAME: ${MODEL_NAME:-grok-4-1-fast-reasoning}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      FASTMEET_ADMIN_PASSWORD: ${FASTMEET_ADMIN_PASSWORD:-FastMeet2026$$}
+      FASTMEET_SECRET: ${FASTMEET_SECRET:-}
+    volumes:
+      - fastmeet-data:/data
+volumes:
+  fastmeet-data:

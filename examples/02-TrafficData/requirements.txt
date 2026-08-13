@@ -1,0 +1,10 @@
+# 依赖与上游 pyproject.toml [project].dependencies 保持一致。
+# 单列一份是为了让 launcher.py 的依赖预检逐条解析（无此文件时会回退读 pyproject.toml）。
+# 注：pywebview / requests 属技能全局桌面壳依赖，与其余 examples 一致不在此重复声明。
+python-fasthtml>=0.12
+plotly>=5.20
+pandas>=2.2
+numpy>=1.26
+click>=8.1
+uvicorn>=0.30
+pyarrow>=15

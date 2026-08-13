@@ -1,0 +1,36 @@
+"""dev_main.py — 开发模式入口（热重载 + 浏览器预览）
+
+使用方式：
+    uv run python src/dev_main.py
+    浏览器打开 http://127.0.0.1:5001
+
+特点：
+    - uvicorn reload=True，代码修改后自动重载
+    - 不启动 pywebview 窗口，直接在浏览器预览
+    - 热更新速度快于 pywebview 窗口刷新
+
+打包前切换到：
+    uv run python src/main.py  # pywebview 桌面模式
+"""
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
+# 自动检测包结构：扁平 / 嵌套
+try:
+    from app import app
+except ImportError:
+    _src_dir = os.path.dirname(__file__)
+    _pkgs = [d for d in os.listdir(_src_dir)
+             if os.path.isdir(os.path.join(_src_dir, d)) and not d.startswith("_")]
+    if _pkgs:
+        mod = __import__(f"{_pkgs[0]}.app", fromlist=["app"])
+        app = getattr(mod, "app")
+    else:
+        raise ImportError("未找到 app 模块")
+
+if __name__ == "__main__":
+    import uvicorn
+    PORT = int(os.environ.get("PORT", 5001))
+    print(f"[DEV] 开发模式: http://127.0.0.1:{PORT}")
+    print("[DEV] 代码修改后自动重载 (Ctrl+C 停止)")
+    uvicorn.run(app, host="127.0.0.1", port=PORT, reload=True)

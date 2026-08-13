@@ -1,0 +1,7 @@
+{
+  "app_name": "Code Assistant",
+  "isolated_venv": "08-code-assistant",
+  "auto_install": false,
+  "install_note": "    [版本互斥] 上游 code-assistant 锁定 python-fasthtml==0.5.1，与 examples/03-06 的 >=0.12.0 数学上不可共存。\n    因此本示例在「示例目录之外」的隔离环境中运行，全局环境不会被降级，示例目录也不会膨胀。",
+  "startup_note": "[提示] 本示例需 LLM API Key（如 OPENAI_API_KEY / ANTHROPIC_API_KEY）；未设置时页面可打开，发起生成会报错（上游行为，非缺陷）。"
+}

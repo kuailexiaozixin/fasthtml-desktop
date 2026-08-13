@@ -1,0 +1,7 @@
+python-fasthtml
+monsterui
+fastcore
+claudette
+pywebview>=5.0
+pythonnet>=3.0 ; sys_platform == "win32"
+httpx>=0.27

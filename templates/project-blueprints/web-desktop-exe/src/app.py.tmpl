@@ -1,0 +1,27 @@
+"""app.py — FastHTML 业务逻辑
+
+在此文件中定义路由、组件和业务逻辑。
+main.py 会自动导入本模块。"""
+from fasthtml.common import *
+
+app, rt = fast_app(
+    hdrs=(
+        Style("""
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: -apple-system, sans-serif; padding: 20px; }
+            .container { max-width: 800px; margin: auto; }
+        """),
+    ),
+)
+
+
+@rt
+def index():
+    """首页"""
+    return Titled("{{APP_NAME}}",
+        Div(
+            H1("欢迎使用 {{APP_NAME}}"),
+            P("在此处开始编写您的业务逻辑。"),
+            cls="container"
+        )
+    )

@@ -1,0 +1,4 @@
+{
+  "app_name": "GenUI Weather",
+  "startup_note": "[提示] 本示例调用 LLM 生成 UI：推荐用用户级环境变量（setx ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic + setx ANTHROPIC_AUTH_TOKEN=<DeepSeek Key>），\n    也可在示例目录 .env 配置（环境变量优先于 .env）。未配置时页面可打开，发起对话会报错（上游行为，非缺陷）。"
+}

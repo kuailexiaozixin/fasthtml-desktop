@@ -1,0 +1,147 @@
+"""prototype_app.py — UI 原型模板
+
+此文件为纯界面原型，不接入后端逻辑。
+确认布局无误后，将界面代码复制到 src/app.py 并添加 HTMX 属性。
+
+运行方式：
+    uv run python prototype_app.py
+    浏览器打开 http://127.0.0.1:5001
+
+模板使用说明（替换以下区域）：
+    1. TITLE: 修改应用标题
+    2. MOCK_DATA: 将模拟数据替换为真实 API 返回格式
+    3. SEARCH_FORM: 根据业务需求调整查询字段
+    4. RESULT_TABLE: 根据数据字段调整表格列
+    5. PAGINATION: 根据分页逻辑调整
+"""
+from fasthtml.common import *
+
+# ═══════════════════════════════════════════════════
+# 配置区：根据业务需要修改
+# ═══════════════════════════════════════════════════
+
+APP_TITLE = "我的桌面工具"  # ← 修改为你的应用名
+MOCK_DATA = [               # ← 替换为真实数据格式
+    {"id": "001", "name": "示例项目 A", "status": "已完成", "date": "2026-07-17"},
+    {"id": "002", "name": "示例项目 B", "status": "进行中", "date": "2026-07-16"},
+    {"id": "003", "name": "示例项目 C", "status": "待开始", "date": "2026-07-15"},
+]
+
+# ═══════════════════════════════════════════════════
+# CSS 内联样式
+# ═══════════════════════════════════════════════════
+
+# 开发阶段可临时用 pico=True 快速启动，确认布局后替换为内联 CSS：
+# app, rt = fast_app(pico=True)  # 开发用
+# 打包前必须用内联 CSS：
+# from templates.inline_css.picocss import PICO_CSS
+# app, rt = fast_app(hdrs=(Style(PICO_CSS),))
+
+app, rt = fast_app(pico=True)
+
+# ═══════════════════════════════════════════════════
+# 布局组件
+# ═══════════════════════════════════════════════════
+
+def search_form():
+    """搜索/查询表单 — 根据业务需求调整字段"""
+    return Form(
+        Div(
+            # ── 查询条件区域（按需增删字段）──
+            Input(name="keyword", placeholder="输入关键词...", style="flex:1;"),
+            Select(   # ← 下拉选择框（如不需要可删除）
+                Option("全部", value=""),
+                Option("类别 A", value="A"),
+                Option("类别 B", value="B"),
+                name="category",
+            ),
+            Button("查询", type="submit"),
+            style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;",
+        ),
+        hx_post="/search",    # 原型阶段可先注释掉 HTMX 属性
+        hx_target="#result",
+        hx_swap="innerHTML",
+    )
+
+
+def result_table(data):
+    """结果表格 — 根据数据字段调整列"""
+    if not data:
+        return Div("暂无数据", style="text-align:center; padding:2rem; color:#888;")
+
+    return Table(
+        # ── 表头 ──
+        Thead(Tr(*[Th(col) for col in data[0].keys()])),
+        # ── 数据行 ──
+        Tbody(*[
+            Tr(*[Td(str(row[col])) for col in row.keys()])
+            for row in data
+        ]),
+    )
+
+
+def pagination(current=1, total=5):
+    """分页组件"""
+    return Div(
+        *[
+            Button(
+                str(i),
+                hx_post=f"/search?page={i}",
+                hx_target="#result",
+                style=f"margin:2px; {'font-weight:bold' if i==current else ''}",
+            )
+            for i in range(1, total + 1)
+        ],
+        style="display:flex; justify-content:center; margin-top:1rem;",
+    )
+
+
+def statistics_bar(data):
+    """统计信息栏 — 展示数据概览"""
+    return Div(
+        f"共 {len(data)} 条记录",
+        style="text-align:right; font-size:0.9rem; color:#666; margin-bottom:8px;",
+    )
+
+
+# ═══════════════════════════════════════════════════
+# 页面路由
+# ═══════════════════════════════════════════════════
+
+@rt("/")
+def get():
+    return Titled(
+        APP_TITLE,
+        Main(
+            H1(APP_TITLE, style="margin-bottom:1rem;"),
+            # ── 搜索区域 ──
+            search_form(),
+            Hr(),
+            # ── 结果区域 ──
+            statistics_bar(MOCK_DATA),
+            Div(result_table(MOCK_DATA), id="result"),
+            # ── 分页区域（如数据量小可删除）──
+            pagination(current=1, total=3),
+            style="max-width:960px; margin:0 auto; padding:1rem;",
+        ),
+    )
+
+
+@rt("/search")
+def post(keyword: str = "", category: str = "", page: int = 1):
+    """搜索路由（原型阶段返回模拟数据）"""
+    # 模拟搜索过滤（替换为真实 API 调用）
+    filtered = MOCK_DATA
+    if keyword:
+        filtered = [d for d in filtered if keyword.lower() in str(d).lower()]
+    if category:
+        filtered = [d for d in filtered if d.get("category") == category]
+
+    return Div(
+        statistics_bar(filtered),
+        result_table(filtered),
+        pagination(current=page, total=max(1, (len(filtered) + 9) // 10)),
+    )
+
+
+serve()
