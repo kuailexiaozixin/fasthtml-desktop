@@ -1,4 +1,4 @@
-***
+---
 
 name: fasthtml-desktop
 description: >
@@ -12,7 +12,7 @@ author: agent
 agent_created: true
 platform: multi
 
-***
+---
 
 # fasthtml-desktop
 
