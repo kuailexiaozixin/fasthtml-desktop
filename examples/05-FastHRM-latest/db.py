@@ -82,7 +82,7 @@ def migrate() -> list[str]:
         for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
             if path.stem in done:
                 continue
-            conn.executescript(path.read_text())
+            conn.executescript(path.read_text(encoding="utf-8"))
             conn.execute("INSERT INTO schema_migrations(version, applied_at) VALUES (?, datetime('now'))",
                          (path.stem,))
             applied.append(path.stem)

@@ -69,7 +69,11 @@ CONFIGS: dict[str, dict] = {
     ),
     "03-FastCRM": dict(APP_NAME="FastCRM"),
     "04-FastERP": dict(APP_NAME="FastERP"),
+    # 04/05 的 -latest：predictivelabsai 上游「完整版」克隆（保留 migrations/fasterp/ATS 等全部模块），
+    # 仅加桌面壳（main.py 包装 web_app.app + 建库播种），不精简不删减功能。
+    "04-FastERP-latest": dict(APP_NAME="FastERP"),
     "05-FastHRM": dict(APP_NAME="FastHRM"),
+    "05-FastHRM-latest": dict(APP_NAME="FastHRM"),
     "06-FastInsights": dict(APP_NAME="FastInsights"),
     # 07：genUI Weather（kafkasl/genUI 完整克隆 + 仅加桌面壳）。上游 serve() 默认端口 5001，
     # 调用 LLM 生成 UI，需 LLM API Key；推荐用户级环境变量（setx ANTHROPIC_BASE_URL=…/anthropic
