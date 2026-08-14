@@ -56,6 +56,12 @@ function authDemo(btn){const f=document.getElementById('auth-login-form');if(!f)
 """
 
 
+def _safe_next(value, fallback="/"):
+    """Accept same-origin paths only; never turn auth into an open redirect."""
+    value = (value or "").strip()
+    return value if value.startswith("/") and not value.startswith("//") else fallback
+
+
 def auth_modal(app_name: str):
     return Div(
         Div(

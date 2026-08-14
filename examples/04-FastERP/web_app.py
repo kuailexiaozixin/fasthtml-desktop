@@ -30,6 +30,7 @@ import db
 from web.layout import page, LAYOUT_CSS
 from web import views, ai
 from web.landing import landing_page
+from web.seo import register_seo_routes
 from web.developer import developer_page
 from web import account_auth, google_auth, accounting
 from web.api import api
@@ -48,12 +49,12 @@ app.mount("/api", api)
 
 
 account_auth.register_fasthtml_routes(rt, app_name="FastERP", session_key="user", success_path="/")
-
 # Provision the documented demo admin so the login screen works without an email
 # verification round-trip (the auth store otherwise starts empty and registration
-# cannot verify accounts locally). Override with FASTERP_ADMIN_EMAIL/PASSWORD.
+# cannot verify accounts locally). Override with FASTERP/FASTHR _ADMIN_EMAIL/PASSWORD.
 account_auth.accounts.ensure_account(VALID_EMAIL, VALID_PASSWORD, f"{ENV_LABEL} Admin", verified=True)
 account_auth.set_demo_credentials(VALID_EMAIL, VALID_PASSWORD)
+
 
 
 @rt("/swagger.json")
@@ -398,9 +399,7 @@ async def post(session, message: str = "", thread_id: str = ""):
     tid = thread_id or _thread(session)
 
     async def gen():
-        with db.cursor() as conn:
-            conn.execute("INSERT INTO chat_messages(thread_id,role,content,created) VALUES(?,?,?,datetime('now'))",
-                         (tid, "user", message))
+        db.add_chat_message(tid, "user", message)
         full = []
         async for chunk in ai.stream_chat(message):
             if chunk.startswith("data: "):
@@ -411,9 +410,7 @@ async def post(session, message: str = "", thread_id: str = ""):
                 except Exception:
                     pass
             yield chunk
-        with db.cursor() as conn:
-            conn.execute("INSERT INTO chat_messages(thread_id,role,content,created) VALUES(?,?,?,datetime('now'))",
-                         (tid, "assistant", "".join(full)))
+        db.add_chat_message(tid, "assistant", "".join(full))
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
@@ -421,13 +418,22 @@ async def post(session, message: str = "", thread_id: str = ""):
 def _ensure_db():
     existed = db.db_exists()
     db.init_schema()
-    if not existed:
+    if db.using_postgres():
+        if not db.scalar("SELECT count(*) FROM companies"):
+            logger.warning(
+                "PostgreSQL schema is ready but has no companies; "
+                "run scripts/seed_postgres.py before using ERP screens"
+            )
+    elif not existed:
         logger.info("No database found — seeding synthetic ERP data…")
         import seed
         seed.build()
 
 
 _ensure_db()
+
+
+register_seo_routes(app)
 
 if __name__ == "__main__":
     logger.info("FastERP on http://localhost:%s  (login %s)", PORT, VALID_EMAIL)

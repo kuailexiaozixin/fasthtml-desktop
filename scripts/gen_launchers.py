@@ -68,12 +68,10 @@ CONFIGS: dict[str, dict] = {
         STARTUP_NOTE="提示：本示例为纯合成数据的只读看板 —— 无数据库、无需注册登录、无需任何 API Key，双击即可查看全部六个分析页面。\n    首次启动会生成约 2.3 万条合成观测数据（数秒），并把 plotly.js 从已安装的 plotly 包缓存到 vendor/ 目录，之后完全离线可用。",
     ),
     "03-FastCRM": dict(APP_NAME="FastCRM"),
+    # 04/05：predictivelabsai 上游「完整版」克隆（保留 migrations/fasterp/ATS 等全部模块），
+    # 本地已做 SQLite 化/注册登录离线修复，加桌面壳（main.py 包装 web_app.app + 建库播种）。
     "04-FastERP": dict(APP_NAME="FastERP"),
-    # 04/05 的 -latest：predictivelabsai 上游「完整版」克隆（保留 migrations/fasterp/ATS 等全部模块），
-    # 仅加桌面壳（main.py 包装 web_app.app + 建库播种），不精简不删减功能。
-    "04-FastERP-latest": dict(APP_NAME="FastERP"),
     "05-FastHRM": dict(APP_NAME="FastHRM"),
-    "05-FastHRM-latest": dict(APP_NAME="FastHRM"),
     "06-FastInsights": dict(APP_NAME="FastInsights"),
     # 07：genUI Weather（kafkasl/genUI 完整克隆 + 仅加桌面壳）。上游 serve() 默认端口 5001，
     # 调用 LLM 生成 UI，需 LLM API Key；推荐用户级环境变量（setx ANTHROPIC_BASE_URL=…/anthropic

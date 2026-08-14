@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""main.py — FastHR 桌面入口（pywebview + uvicorn）
+"""main.py — FastHRM-latest 桌面入口（pywebview + uvicorn）
 
-将上游 web_app.py 的 FastHTML 应用包装为桌面应用：
+包装 predictivelabsai FastHRM 上游「完整版」web_app.py 为桌面应用：
   - 只读资源(_MEIPASS 顶层) 与可写数据(EXE 同级 data/) 分离
   - 通过 FASTHR_DB 环境变量把 SQLite 重定向到可写目录
   - find_free_port 自动端口探测；wait_for_server 防白屏
   - SERVER_ONLY=1 无头模式（服务器/CI/冒烟测试）
-  - import web_app 时会自动建库并播种合成数据（首次启动稍慢）
+  - import web_app 时顶层 _ensure_db() 自动建库并播种合成数据（首次启动稍慢）
 
-开发运行:  python main.py            （需先 python start.py 装好依赖）
+开发运行:  python main.py            （launcher 会自动预检依赖）
 无头运行:  SERVER_ONLY=1 python main.py
 """
 import os, sys, socket, threading, signal
 from pathlib import Path
 
-APP_TITLE = "FastHR"
+APP_TITLE = "FastHRM"
 ENV_PREFIX = "FASTHR"
 DB_FILENAME = "fasthr.sqlite"
 DEFAULT_PORT = 5010
@@ -34,17 +34,6 @@ os.chdir(RESOURCE_DIR)
 if str(RESOURCE_DIR) not in sys.path:
     sys.path.insert(0, str(RESOURCE_DIR))
 
-
-
-def _bootstrap_db():
-    """与上游 Dockerfile 的 CMD 一致：import web_app 前先确保数据库已播种。
-    （如 FastInsights 的 web.api 在 import 期就要求仓库表已存在）"""
-    import db
-    if not db.db_exists():
-        print("[INFO] 首次启动：正在生成合成种子数据...")
-        import seed
-        seed.build()
-
 def find_free_port(preferred: int, start: int = 5001, end: int = 6000) -> int:
     def _free(p):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -55,7 +44,6 @@ def find_free_port(preferred: int, start: int = 5001, end: int = 6000) -> int:
         if _free(port):
             return port
     raise RuntimeError("未找到可用端口")
-
 
 def wait_for_server(url: str, timeout: int = 30) -> bool:
     import time
@@ -68,16 +56,14 @@ def wait_for_server(url: str, timeout: int = 30) -> bool:
             time.sleep(1)
     return False
 
-
 def start() -> None:
     import uvicorn
     port = int(os.environ.get("PORT", 0)) or find_free_port(DEFAULT_PORT)
-    print(f"[OK] FastHR 服务启动: http://127.0.0.1:{port}")
+    print(f"[OK] FastHRM 服务启动: http://127.0.0.1:{port}")
     print("[INFO] 登录: admin@fasthr.example / FastHR2026$")
     print("[INFO] 关闭窗口或按 Ctrl+C 退出")
 
-    # import 即触发建库+播种（_ensure_db），必须在环境变量设置之后
-    _bootstrap_db()
+    # import 即触发 web_app 顶层 _ensure_db()（建库 + 播种），必须在环境变量设置之后
     import web_app
 
     server = uvicorn.Server(uvicorn.Config(web_app.app, host="127.0.0.1", port=port, reload=False))
@@ -102,7 +88,6 @@ def start() -> None:
     print("WEBVIEW_WINDOW_OPENED", flush=True)
     webview.start()
     print("WEBVIEW_WINDOW_CLOSED", flush=True)
-
 
 if __name__ == "__main__":
     start()

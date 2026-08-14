@@ -4,11 +4,13 @@
 
 *Sell, ship, invoice, get paid.* 默认端口 **5011**（集成 API `api_app.py` 在 **5012**）。
 
-> ⚠️ **仅含合成数据。** 全部数据由 `seed.py` 生成确定性合成数据，属于演示性会计软件，**非** QuickBooks/Intuit 集成，也**非**生产记账系统。
+> ⚠️ **仅含合成数据。** 全部数据由 `seed.py` 生成确定性合成数据，属于演示性会计软件，**非** QuickBooks/Intuit 集成，也**非**生产记账系统。默认以 SQLite 运行；上游的 PostgreSQL + SAP 迁移能力保留（见「数据库约定」）。
+
+> 本示例为上游 [predictivelabsai/FastERP](https://github.com/predictivelabsai/FastERP) **完整版**克隆（含 `fasterp` 业务包 + `migration/` + `migrations/` SAP 迁移模块），并做了三类本地必要适配：**SQLite 化**、**修复注册登录（离线免邮件验证）**、**移除大体积文档/媒体**。合规见 `../../THIRD_PARTY_NOTICES.md`。
 
 本 README 有**两个用途**：
 - **用途一（给最终用户）**：怎么启动、怎么登录、数据在哪、AI 怎么配。
-- **用途二（给 LLM / 开发者）**：怎么从零克隆出一模一样的桌面应用，含目录结构、入口约定、`_bootstrap_db()` 导入顺序、PyInstaller 打包要点。
+- **用途二（给 LLM / 开发者）**：怎么从零克隆出一模一样的桌面应用，含目录结构、入口约定、`_ensure_db()` 导入顺序、PyInstaller 打包要点。
 
 ---
 
@@ -16,18 +18,16 @@
 
 ### 快速开始（一键启动）
 
-**最终用户（双击即用）**：直接**双击 `启动.bat`**，脚本会自动定位 Python、首次运行创建 `.venv` 并安装依赖、随后弹出桌面窗口。无需打开终端。
+**最终用户（双击即用）**：直接**双击 `启动.bat`**，脚本会自动定位 Python、预检/安装依赖、首次运行自动建库播种，随后弹出桌面窗口。无需打开终端。
 
 ```bat
-启动.bat              # 双击：自动建 .venv → 装依赖 → 生成种子数据 → 弹出桌面窗口
+启动.bat              # 双击：自动预检/装依赖 → 建库播种 → 弹出桌面窗口
 启动.bat server       # 可选：仅启动 HTTP 服务（无头模式，便于浏览器访问 / 调试）
 ```
 
 > ⚠️ 注意：`start.py` 是**开发者命令行工具**，不是供最终用户双击的启动器——`.py` 双击默认会用编辑器打开，不会运行。用户入口统一是 **`启动.bat`**。
 
-
-
-首次运行：① 若没有 `.venv` 则创建并 `pip install -r requirements.txt pywebview`（requirements 已含 `pytest>=8.0`）；② 若本地无数据库自动 `seed.build()`；③ 启动服务（默认 `http://127.0.0.1:5011`）并打开桌面窗口。
+首次运行：① `launcher.py` 预检 `requirements.txt` 依赖（缺失自动装）；② `import web_app` 时顶层 `_ensure_db()` 自动建库并播种合成数据；③ 启动服务（默认 `http://127.0.0.1:5011`）并打开桌面窗口。
 
 ### 登录凭据（默认）
 
@@ -39,8 +39,6 @@
 ### 开发者命令行（`start.py`）
 
 > 供开发者在终端使用：质量门禁、依赖安装、无头调试。普通用户请用 `启动.bat`。
-
-
 
 | 命令 | 说明 |
 |---|---|
@@ -97,16 +95,19 @@ python -m pytest -q        # accounting 与 API 不变量测试（tests/）
 
 ```
 04-FastERP/
-├── web_app.py        # FastHTML 路由、鉴权、SSE 聊天、boot（serve(port=PORT)）
+├── web_app.py        # FastHTML 路由、鉴权、SSE 聊天、boot（顶层 _ensure_db() + serve(port=PORT)）
 ├── api_app.py        # FastAPI 集成桩 + OpenAPI/Swagger（端口 5012）
-├── db.py             # SQLite schema（selling + stock）+ KPI helper；DB_PATH = getenv("FASTERP_DB")
-├── seed.py           # 确定性合成：客户、物料、订单、发票、库存
+├── db.py             # 数据门面：SQLite 默认 / PostgreSQL 可选（DB_URL）
+├── seed.py           # 确定性合成：客户、物料、订单、发票、库存（SQLite 模式）
 ├── main.py           # 桌面入口（pywebview + uvicorn）
 ├── start.py          # 一键脚本：建 venv / 装依赖 / 启动 / --check / --reseed
 ├── dev_check.py      # 进程内 TestClient 质量门禁
-├── requirements.txt  # python-fasthtml>=0.12.0, fastapi>=0.115, uvicorn>=0.30, httpx>=0.27, python-dotenv>=1.0, pytest>=8.0
+├── fasterp/          # 上游业务包（config / database / 域模块；PostgreSQL 运行时）
+├── migration/        # 迁移生成器 / 工具
+├── migrations/       # SAP 迁移 SQL（migrations/postgres/*.sql）
+├── requirements.txt  # python-fasthtml>=0.12.0, fastapi>=0.115, uvicorn>=0.30, httpx>=0.27, python-dotenv>=1.0, psycopg[binary]>=3.2, psycopg-pool>=3.2
 ├── web/
-│   ├── layout.py / views.py / accounting.py / ai.py / api_core.py / api.py / account_auth.py / google_auth.py / developer.py / landing.py
+│   ├── layout.py / views.py / accounting.py / ai.py / api_core.py / api.py / account_auth.py / google_auth.py / developer.py / landing.py / seo.py
 │   └── static/
 ├── static/  docs/  scripts/  tests/  Dockerfile  docker-compose.yml  .env.sample  SKILLS.md  swagger.json
 └── data/             # 运行时数据库（桌面态落点，**勿打包进 EXE**）
@@ -123,31 +124,32 @@ python -m pytest -q        # accounting 与 API 不变量测试（tests/）
 
 ```python
 DB_PATH = os.getenv("FASTERP_DB") or str(Path(__file__).parent / "fasterp.sqlite")
+USE_POSTGRES = bool(os.getenv("DB_URL"))
 ```
 
-### 合成数据播种与导入顺序（关键）
+默认 SQLite 离线运行；设置 `DB_URL` 后切换 PostgreSQL 运行时（需先 `scripts/seed_postgres.py` 建种子，且迁移来自 `migrations/postgres/`）。
 
-`web_app.py` 启动时 `_ensure_db()` 自动 `seed.build()`。`main.py` / `start.py` / `dev_check.py` 都内置 `_bootstrap_db()`，在 `import web_app` **之前**先播种：
+### 建库播种与导入顺序（关键）
+
+`web_app.py` 在**顶层**调用 `_ensure_db()`（import 即触发）：SQLite 模式下自动 `init_schema()` + 无库时 `seed.build()`。因此 `main.py` / `start.py` / `dev_check.py` **无需**额外的 `_bootstrap_db()`，只需在设置好 `FASTERP_DB` 环境变量后 `import web_app`：
 
 ```python
-def _bootstrap_db():
-    import db
-    if not db.db_exists():
-        import seed
-        seed.build()
+import os
+os.environ.setdefault("FASTERP_DB", str(DATA_DIR / "fasterp.sqlite"))
+import web_app   # 触发顶层 _ensure_db()：建库 + 播种
 ```
 
-**务必「先 seed 再 import web_app」。**
+**务必「先设 `FASTERP_DB`，再 `import web_app`」。**
 
 ### 三件套机制
 
 - **`main.py`**：EXE 入口，`os.chdir(RESOURCE_DIR)` 后 `import web_app`，`uvicorn.Server(Config(web_app.app, host="127.0.0.1", port=port, reload=False))` 起服务，再 pywebview 开窗口。
-- **`start.py`**：`ensure_env()` 幂等建 venv 并装依赖（含 pytest）；`start()` 调 `_bootstrap_db()`；`--check`/`--reseed`/`--port` 见上。
+- **`start.py`**：`ensure_env()` 幂等建 venv 并装依赖；`start()` 设 `FASTERP_DB` 后 `import web_app`；`--check`/`--reseed`/`--port` 见上。
 - **`dev_check.py`**：`TestClient(web_app.app)` 进程内验证：未登录 `/`→非 500、登录流、业务路由 `/orders /invoices /items /customers /suppliers /purchase /accounting /ai /guide`→200、`/swagger.json`→合法 JSON、静态资源→200。全过打印 `[GATE] 全部通过，可交付/可打包`。
 
 ### 打包为 EXE（PyInstaller 要点）
 
-扁平布局（同 03）：仓库根即冻结态 `RESOURCE_DIR = Path(sys._MEIPASS)`（无 `app/`）。推荐用技能级构建驱动：
+扁平布局：仓库根即冻结态 `RESOURCE_DIR = Path(sys._MEIPASS)`（无 `app/`）。推荐用技能级构建驱动：
 
 ```bash
 python scripts/build_fast_example.py \
@@ -170,10 +172,10 @@ pyinstaller main.py --onefile --noupx --console \
 ```
 
 要点：
-1. **项目模块自动收集**：`web_app.py` `db.py` `seed.py` `web/` 经 `import web_app` 自动收入冻结包，无需 `--add-data`。
+1. **项目模块自动收集**：`web_app.py` `db.py` `seed.py` `fasterp/` `web/` 经 `import web_app` 自动收入冻结包，无需 `--add-data`。
 2. **sqlite3**：须用 `scripts/pyinstaller_hooks/hook-sqlite3.py`（`--additional-hooks-dir`）收集 `_sqlite3.pyd` / `sqlite3.dll`；DB 走 `FASTERP_DB` 重定向到可写 `data/`。
 3. **pywebview**：`clr` + `webview.platforms.winforms` + `webview.platforms.edgechromium` + `webview/lib` 必须。
-4. **FastAPI 集成（可选）**：`api_app.py`（端口 5012）是独立只读桩，桌面入口不导入它。若要一并分发，追加 `--add-data "api_app.py;."`，运行时 `python -m uvicorn api_app:app --port 5012` 即可（与桌面 app 共享 db）。
+4. **PostgreSQL（可选）**：默认不启用；如需打包 PostgreSQL 运行时，追加收集 `fasterp.database`（psycopg）。纯 SQLite 桌面分发无需。
 5. **冒烟**：启动 EXE 验证 `http://127.0.0.1:5011/` 返回 200 且窗口句柄存在。
 
 ### 环境变量完整清单
@@ -187,6 +189,7 @@ pyinstaller main.py --onefile --noupx --console \
 | `FASTERP_SECRET` | 随机 | 会话签名密钥 |
 | `FASTERP_ENV_LABEL` | `FastERP` | UI 标签 |
 | `FASTERP_RELOAD` | `0` | 开发热重载 |
+| `DB_URL` | 空 | 非空则切 PostgreSQL 运行时 |
 | `MODEL_PROVIDER` | `xai` | xai / openai / anthropic / google |
 | `MODEL_NAME` | `grok-4-1-fast-reasoning` | 模型名 |
 | `XAI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | 空 | 对应厂商 Key |
@@ -195,4 +198,4 @@ pyinstaller main.py --onefile --noupx --console \
 
 ## 许可
 
-MIT。属于 [`fasthtml-oss-migrations`](https://github.com/predictivelabsai/fasthtml-oss-migrations) 计划。
+MIT。上游 [predictivelabsai/FastERP](https://github.com/predictivelabsai/FastERP)（Predictive Labs Ltd），本地做了 SQLite 化、注册登录离线修复、移除大文件三类必要适配。完整版权与改动说明见 `../../THIRD_PARTY_NOTICES.md`。

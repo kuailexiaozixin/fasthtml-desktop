@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Build the animated demo GIF from per-screen PNG frames.
 #
-# Capture frames first (e.g. via Playwright MCP) into docs/demo/frames/ named
-# in display order: 01-dashboard.png, 02-deals.png, …  Then run this script.
+# Capture the guide screenshots and curated frame set first, then run this script:
 #
+#   DEMO_BASE_URL=http://localhost:5010 .venv/bin/python \
+#     scripts/capture_guide_screenshots.py --demo-frames docs/demo/frames
 #   bash scripts/build_demo_gif.sh
 #
 # Output: docs/demo/fasthr-walkthrough.gif  (1 frame ≈ 1.6s, looping)
@@ -40,3 +41,10 @@ else
 fi
 
 echo "Wrote $OUT ($(du -h "$OUT" | cut -f1))"
+
+# The landing page serves its tour from static/, which the docs/ copy is not
+# reachable from. Publish both from the same build so they cannot drift — that
+# is exactly how the landing page ended up a release behind before.
+LANDING="static/product-demo.gif"
+cp "$OUT" "$LANDING"
+echo "Wrote $LANDING (landing-page product tour)"

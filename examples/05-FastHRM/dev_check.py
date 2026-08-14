@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dev_check.py — FastHR 一键质量门禁（测试/调试/检查/验证）
+"""dev_check.py — FastHRM 一键质量门禁（测试/调试/检查/验证）
 
 进程内 TestClient 验证，不占端口、不弹窗口，秒级完成：
   1. 未登录访问 /            -> 落地页或跳转（不能 500）
@@ -11,6 +11,9 @@
   7. 静态资源可达             -> 200
 
 全部通过 exit 0；任一失败 exit 1（供 CI / 打包前门禁串联）。
+
+说明：latest 版 web_app.py 顶层 _ensure_db() 会在 import 时自动建库播种，
+因此本脚本无需手动 bootstrap，直接 import web_app 即可。
 """
 import os, sys, json
 from pathlib import Path
@@ -21,20 +24,9 @@ sys.path.insert(0, str(HERE))
 
 EMAIL = "admin@fasthr.example"
 PASSWORD = "FastHR2026$"
-ROUTES = ['/employees', '/departments', '/leave', '/attendance', '/payroll', '/ai', '/guide']
+ROUTES = ['/employees', '/departments', '/leave', '/attendance', '/payroll', '/careers', '/talent/candidates', '/ai', '/guide']
 
 failures = []
-
-
-
-def _bootstrap_db():
-    """与上游 Dockerfile 的 CMD 一致：import web_app 前先确保数据库已播种。
-    （如 FastInsights 的 web.api 在 import 期就要求仓库表已存在）"""
-    import db
-    if not db.db_exists():
-        print("[INFO] 首次启动：正在生成合成种子数据...")
-        import seed
-        seed.build()
 
 def check(name, ok, detail=""):
     tag = "[PASS]" if ok else "[FAIL]"
@@ -42,11 +34,9 @@ def check(name, ok, detail=""):
     if not ok:
         failures.append(name)
 
-
 def main():
     from starlette.testclient import TestClient
-    _bootstrap_db()
-    import web_app  # import 即自动建库 + 播种
+    import web_app  # import 即触发顶层 _ensure_db()：建库 + 播种
 
     c = TestClient(web_app.app)
 
@@ -93,7 +83,6 @@ def main():
         sys.exit(1)
     print("[GATE] 全部通过，可交付/可打包")
     sys.exit(0)
-
 
 if __name__ == "__main__":
     main()

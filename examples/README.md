@@ -15,10 +15,8 @@ FastHTML + pywebview 桌面应用示例，用纯 Python 演示「写桌面软件
 | `01-Bricksmith/` | 企业知识库 + 检索增强问答（predictivelabsai/bricksmith 完整克隆 + 仅加桌面壳，SQLite + sqlite-vec 向量检索） | `fasthtml` `sqlite-vec` `fastembed` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5001，RAG 需 LLM Key） |
 | `02-TrafficData/` | 交通数据只读看板（predictivelabsai/traffic-data-analysis 完整克隆 + 仅加桌面壳，6 个 Plotly 页） | `fasthtml` `plotly` `pandas` `numpy` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5001，纯离线） |
 | `03-FastCRM/` | 销售 CRM（Frappe CRM 的「服务端 + HTMX」移植） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5006） |
-| `04-FastERP/` | ERP（ERPNext 移植，会计工作区，**精简定制版**） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5011） |
-| `04-FastERP-latest/` | ERP（predictivelabsai/FastERP **上游完整版**克隆：fasterp 业务包 + SAP 迁移模块，对照精简版 `04-FastERP`） | `fasthtml` `pywebview` `uvicorn` | 上游源码（未加桌面壳） |
-| `05-FastHRM/` | HR 系统（Frappe HR 移植，人/时间/薪，**精简定制版**） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5010） |
-| `05-FastHRM-latest/` | HR + **ATS 招聘 + 人才平台**（predictivelabsai/FastHRM **上游完整版**克隆，含 recruitment/talent/ATS 模块 + migrations，对照精简版 `05-FastHRM`） | `fasthtml` `pywebview` `uvicorn` | 上游源码（未加桌面壳） |
+| `04-FastERP/` | ERP（predictivelabsai/FastERP **上游完整版**克隆：ERPNext 移植 + fasterp 业务包 + SAP 迁移模块；本地做了 SQLite 化/注册登录离线修复/去大文件） | `fasthtml` `pywebview` `uvicorn` `psycopg` | 双击 `启动.bat`（默认端口 5011） |
+| `05-FastHRM/` | HR 系统（predictivelabsai/FastHRM **上游完整版**克隆：人/时间/薪 + ATS 招聘 + 人才平台 + 生命周期；本地做了 SQLite 化/注册登录离线修复/去大文件） | `fasthtml` `pywebview` `uvicorn` `langchain-openai` `pdfplumber` | 双击 `启动.bat`（默认端口 5010） |
 | `06-FastInsights/` | BI 工具（Frappe Insights 移植，Plotly + AI 文本转 SQL） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5008） |
 | `07-genui-weather/` | 生成式 UI 三件套（kafkasl/genUI 完整克隆 + 仅加桌面壳：weather / your_color / hal9000） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动-weather.bat`（weather，默认端口 5001，需 ANTHROPIC_API_KEY）；另含 `启动-your_color.bat` / `启动-hal9000.bat` |
 | `08-code-assistant/` | AI 代码助手（phact/code-assistant 完整克隆 + 仅加桌面壳，生成可运行 Web 应用） | `python-fasthtml==0.5.1`（外置隔离 venv）`pywebview` | 双击 `启动.bat`（默认端口 5001，需 LLM Key） |
@@ -95,24 +93,27 @@ FastHTML 移植版 Frappe CRM：线索、看板交易管道、联系人、组织
 
 ---
 
-## `04-FastERP/` — ERP（ERPNext 移植，会计工作区）
+## `04-FastERP/` — ERP（predictivelabsai/FastERP 上游完整版）
 
-FastHTML 移植版 ERPNext，Intuit 风格自包含会计工作区：Order-to-Cash、Procure-to-Stock、库存与会计 + AI 助手。要点（详见 [`04-FastERP/README.md`](04-FastERP/README.md)）：
+FastHTML 移植版 ERPNext，Intuit 风格自包含会计工作区：Order-to-Cash、Procure-to-Stock、库存与会计 + AI 助手；**上游完整版**（含 `fasterp` 业务包 + `migrations/` SAP 迁移模块）。要点（详见 [`04-FastERP/README.md`](04-FastERP/README.md)）：
 
 - **端口分离**：主应用 `@5011`，集成 API `api_app.py` `@5012`，演示「业务 + 集成」双服务布局。
+- **完整业务包 + SAP 迁移**：`fasterp/` 域包 + `migration/` + `migrations/`（PostgreSQL 可选，设 `DB_URL` 启用）。
 - **会计领域建模**：发票/收款/库存/总账的领域对象与流转，适合做领域驱动桌面应用的参考。
-- **共享认证 + 演示账号**：同 03，复用 `web/account_auth.py`。
+- **共享认证 + 演示账号**：同 03，复用 `web/account_auth.py`（本地修复离线注册/登录）。
 - **合成演示公司**：确定性会计数据，演示性软件非生产记账系统。
 
 ---
 
-## `05-FastHRM/` — HR 系统（Frappe HR 移植）
+## `05-FastHRM/` — HR 系统（predictivelabsai/FastHRM 上游完整版）
 
-FastHTML 移植版 Frappe HR，聚焦人（员工/部门）、时间（请假/考勤）、薪（工资单）三大支柱。要点（详见 [`05-FastHRM/README.md`](05-FastHRM/README.md)）：
+FastHTML 移植版 Frappe HR，在三大支柱（人/时间/薪）基础上，**上游完整版**还含完整的 **ATS 招聘 + 人才平台 + 员工生命周期**模块。要点（详见 [`05-FastHRM/README.md`](05-FastHRM/README.md)）：
 
 - **三大支柱模块化**：员工目录 + 部门树、请假/考勤流转、工资单计算，模块边界清晰。
-- **共享认证 + 演示账号**：同 03，复用 `web/account_auth.py`。
-- **合成数据**：`seed.py` 生成，无真实 PII。
+- **ATS 招聘 + 人才平台**：候选人漏斗、职位申请、面试评分、Offer；能力模型、绩效目标、OKR、反馈、生命周期/入职/离职。
+- **版本化迁移**：schema 由 `migrations/*.sql` 管理，`db.migrate()` 按序应用。
+- **共享认证 + 演示账号**：同 03，复用 `web/account_auth.py`（本地修复离线注册/登录）。
+- **合成数据**：`seed.py` / `seed_talent.py` / `seed_platform.py` 生成，无真实 PII。
 
 ---
 

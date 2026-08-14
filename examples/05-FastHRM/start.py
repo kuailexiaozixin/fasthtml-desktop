@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""start.py — FastHR 一键启动脚本（开发/测试/调试/验证统一入口）
+"""start.py — FastHRM 一键启动脚本（开发/测试/调试/验证统一入口）
 
 用法：
   python start.py            # 首次自动建 .venv + 装依赖，然后桌面启动
@@ -10,6 +10,9 @@
 
 开发流程（技能约定）：改代码 -> python start.py --check 全绿 -> 手动跑
 python start.py 目检 -> 确认可交付后再打包 EXE。
+
+说明：latest 版 web_app.py 顶层 _ensure_db() 会在 import 时自动建库播种，
+因此 start.py 无需额外 bootstrap，直接转发给 main.py / dev_check.py 即可。
 """
 import os, sys, subprocess, venv
 from pathlib import Path
@@ -17,27 +20,23 @@ from pathlib import Path
 HERE = Path(__file__).parent
 VENV = HERE / ".venv"
 PY = VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-
+DB_FILENAME = "fasthr.sqlite"
 
 def ensure_env():
     if not PY.exists():
         print("[SETUP] 创建虚拟环境 .venv ...")
         venv.create(VENV, with_pip=True)
-        print("[SETUP] 安装依赖（requirements.txt + pywebview）...")
-        subprocess.check_call([str(PY), "-m", "pip", "install", "-q",
-                               "-r", str(HERE / "requirements.txt"), "pywebview"])
-    else:
-        # 幂等补装（requirements 变化时仍能对齐）
-        subprocess.check_call([str(PY), "-m", "pip", "install", "-q",
-                               "-r", str(HERE / "requirements.txt"), "pywebview"])
-
+    # 幂等补装（requirements 变化时仍能对齐）
+    print("[SETUP] 安装依赖（requirements.txt + pywebview）...")
+    subprocess.check_call([str(PY), "-m", "pip", "install", "-q",
+                           "-r", str(HERE / "requirements.txt"), "pywebview"])
 
 def main():
     args = sys.argv[1:]
     ensure_env()
 
     if "--reseed" in args:
-        db_file = HERE / "fasthr.sqlite"
+        db_file = HERE / DB_FILENAME
         if db_file.exists():
             db_file.unlink()
             print(f"[OK] 已删除 {db_file.name}，下次启动将重新播种")
@@ -62,7 +61,6 @@ def main():
 
     r = subprocess.run([str(PY), str(HERE / "main.py")], cwd=HERE, env=env)
     sys.exit(r.returncode)
-
 
 if __name__ == "__main__":
     main()
