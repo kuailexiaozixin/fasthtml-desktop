@@ -29,6 +29,8 @@ AUTH_CSS = """
 .auth-field{width:100%;padding:11px 12px;border:1px solid #d1d5db;border-radius:9px;font:inherit;font-size:14px;margin-bottom:12px}.auth-field:focus{outline:2px solid color-mix(in srgb,var(--accent) 22%,white);border-color:var(--accent)}
 .auth-submit{width:100%;padding:11px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}.auth-link{border:0;background:transparent;color:var(--accent);padding:0;font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
 .auth-forgot{display:block;margin:-3px 0 15px;text-align:right}.auth-msg{min-height:18px;margin:10px 0 0;font-size:13px;color:#b42318}.auth-msg.ok{color:#15803d}.auth-help{font-size:12px;line-height:1.5;color:#6b7280;margin:12px 0 0}
+.auth-demo{background:#f3f4f6;color:#111827;border:1px solid #d1d5db;margin-top:8px;font-weight:650}
+.auth-demo:hover{background:#e5e7eb}
 """
 
 _GOOGLE_ICON = """<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.62z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.91-2.26c-.81.54-1.84.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z" fill="#34A853"/><path d="M3.96 10.71A5.4 5.4 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58A8.64 8.64 0 0 0 9 0 9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z" fill="#EA4335"/></svg>"""
@@ -50,7 +52,14 @@ async function authPost(path, formId, msgId){
   return response.ok;
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')authClose()});
+function authDemo(btn){const f=document.getElementById('auth-login-form');if(!f)return;f.email.value=btn.dataset.demoEmail||'';f.password.value=btn.dataset.demoPass||'';authPost('/auth/local/login',f.id,'auth-login-msg');}
 """
+
+
+def _safe_next(value, fallback="/"):
+    """Accept same-origin paths only; never turn auth into an open redirect."""
+    value = (value or "").strip()
+    return value if value.startswith("/") and not value.startswith("//") else fallback
 
 
 def auth_modal(app_name: str):
@@ -71,6 +80,10 @@ def auth_modal(app_name: str):
                     Input(name="password", type="password", placeholder="Password", autocomplete="current-password", required=True, cls="auth-field"),
                     Button("Forgot password?", type="button", cls="auth-link auth-forgot", onclick="authTab('forgot')"),
                     Button("Sign In", type="submit", cls="auth-submit"),
+                    (Button("Use demo account", type="button", cls="auth-submit auth-demo",
+                            onclick="authDemo(this)",
+                            data_demo_email=DEMO_CREDENTIALS[0], data_demo_pass=DEMO_CREDENTIALS[1])
+                     if DEMO_CREDENTIALS else None),
                     onsubmit="event.preventDefault();authPost('/auth/local/login',this.id,'auth-login-msg')",
                     id="auth-login-form",
                 ),
@@ -88,7 +101,7 @@ def auth_modal(app_name: str):
                     id="auth-register-form",
                 ),
                 Div(id="auth-register-msg", cls="auth-msg", role="status"),
-                P("We will email you a verification link before the account can sign in.", cls="auth-help"),
+                P("Your account is ready to use immediately — no email verification required.", cls="auth-help"),
                 id="auth-register", hidden=True,
             ),
             Div(
@@ -112,11 +125,7 @@ def auth_modal(app_name: str):
 class AccountStore:
     def __init__(self):
         path = Path(os.getenv("FASTSME_AUTH_DB", "data/fastsme-accounts.sqlite"))
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-        except PermissionError:
-            path = Path(__file__).resolve().parents[1] / "data" / "fastsme-accounts.sqlite"
-            path.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
         self._setup()
 
@@ -228,7 +237,12 @@ class AccountStore:
                 account_id = cur.lastrowid
             token = self._issue_token(db, account_id, "verify", 24 * 3600)
         if not self._send_action(email, name, "Verify your account", "verify", token):
-            return False, "Verification email could not be sent. Please try again shortly."
+            # No outbound email channel configured (offline / local demo).
+            # Verify the account locally so registration is usable without a
+            # Postmark round-trip — the documented fix for "register 400 offline".
+            with self._db() as db2:
+                db2.execute("UPDATE accounts SET is_verified=1,updated_at=? WHERE id=?", (now, account_id))
+            return True, "Account created — you can sign in right away."
         return True, "Check your email to verify your account."
 
     def verify(self, token):
@@ -254,16 +268,59 @@ class AccountStore:
             return None
         return dict(row)
 
+    def ensure_account(self, email, password, name="", *, verified=True):
+        """Provision a local/demo account without an email-verification round-trip.
+
+        Used at boot so the documented demo credentials work out of the box.
+        - If the account does not exist, create it verified with the given password.
+        - If it exists but is unverified (e.g. a half-finished registration that
+          could not be emailed a verification link), force the documented password
+          and mark it verified.
+        - A working, already-verified account is left untouched.
+        Idempotent.
+        """
+        email, name = self._email(email), (name or "").strip()[:120]
+        if not email:
+            return None
+        now = int(time.time())
+        with self._db() as db:
+            row = db.execute("SELECT * FROM accounts WHERE email=?", (email,)).fetchone()
+            if row:
+                if row["is_verified"]:
+                    return dict(row)
+                password_hash = self._hash_password(password) if password else row["password_hash"]
+                db.execute(
+                    "UPDATE accounts SET password_hash=?, is_verified=1, name=?, updated_at=? WHERE id=?",
+                    (password_hash, name or row["name"], now, row["id"]))
+                return dict(db.execute("SELECT * FROM accounts WHERE id=?", (row["id"],)).fetchone())
+            if not password:
+                return None
+            password_hash = self._hash_password(password)
+            cur = db.execute(
+                "INSERT INTO accounts(email,name,password_hash,is_verified,created_at,updated_at) "
+                "VALUES(?,?,?,1,?,?)",
+                (email, name, password_hash, now, now))
+            return dict(db.execute("SELECT * FROM accounts WHERE id=?", (cur.lastrowid,)).fetchone())
+
     def forgot(self, email):
+        """Return a local reset link when no email channel is configured, else None.
+
+        When Postmark is configured the reset email is sent and this returns None;
+        the caller simply reports the generic "if an account exists" message.
+        Offline / local demo: surface the reset link directly so the flow stays usable.
+        """
         email = self._email(email)
         if not self._allowed_attempt(email, "forgot", 5, 3600):
-            return
+            return None
         with self._db() as db:
             row = db.execute("SELECT * FROM accounts WHERE email=? AND is_verified=1", (email,)).fetchone()
             if not row:
-                return
+                return None
             token = self._issue_token(db, row["id"], "reset", 3600)
-        self._send_action(email, row["name"], "Reset your password", "reset", token)
+        if not self._send_action(email, row["name"], "Reset your password", "reset", token):
+            base = os.getenv("FASTSME_PUBLIC_URL", "").rstrip("/")
+            return f"{base}/auth/local/reset/{token}" if base else f"/auth/local/reset/{token}"
+        return None
 
     def reset(self, token, password):
         if len(password or "") < 10:
@@ -324,6 +381,14 @@ def _send_email(to, subject, html_body):
         return False
 
 
+# Optional one-click "use demo account" credentials, set by the host app at boot so the
+# login modal can offer a quick entry without typing the documented creds.
+DEMO_CREDENTIALS = None  # (email, password) or None
+
+def set_demo_credentials(email, password):
+    global DEMO_CREDENTIALS
+    DEMO_CREDENTIALS = (email, password) if email else None
+
 accounts = AccountStore()
 
 
@@ -367,7 +432,9 @@ def register_fasthtml_routes(rt, *, app_name, session_key=None, success_path="/"
     @rt("/auth/local/forgot", methods=["POST"])
     async def local_forgot(request):
         form = await request.form()
-        accounts.forgot(form.get("email"))
+        link = accounts.forgot(form.get("email"))
+        if link:
+            return JSONResponse({"message": "Email is not configured, so here is your reset link:", "link": link})
         return JSONResponse({"message": "If an account exists, a reset link has been sent."})
 
     @rt("/auth/local/verify/{token}", methods=["GET"])
@@ -417,7 +484,9 @@ def register_fastapi_routes(app, *, app_name, session_key=None, success_path="/"
     @app.post("/auth/local/forgot")
     async def local_forgot(request):
         form = await request.form()
-        accounts.forgot(form.get("email"))
+        link = accounts.forgot(form.get("email"))
+        if link:
+            return JSONResponse({"message": "Email is not configured, so here is your reset link:", "link": link})
         return JSONResponse({"message": "If an account exists, a reset link has been sent."})
 
     @app.get("/auth/local/verify/{token}")

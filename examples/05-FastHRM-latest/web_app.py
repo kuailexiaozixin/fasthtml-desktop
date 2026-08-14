@@ -93,6 +93,12 @@ def legacy_products():
 
 
 account_auth.register_fasthtml_routes(rt, app_name="FastHRM", session_key="user", success_path="/")
+# Provision the documented demo admin so the login screen works without an email
+# verification round-trip (the auth store otherwise starts empty and registration
+# cannot verify accounts locally). Override with FASTERP/FASTHR _ADMIN_EMAIL/PASSWORD.
+account_auth.accounts.ensure_account(VALID_EMAIL, VALID_PASSWORD, f"{ENV_LABEL} Admin", verified=True)
+account_auth.set_demo_credentials(VALID_EMAIL, VALID_PASSWORD)
+
 
 
 def _user(session):

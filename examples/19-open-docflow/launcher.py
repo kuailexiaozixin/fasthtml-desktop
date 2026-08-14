@@ -335,10 +335,20 @@ def ensure_venv(tee: Tee) -> None:
 
 # --------------------------------------------- 外置隔离 venv（仅版本互斥示例）
 def venv_home() -> Path:
-    """隔离环境的统一落点：**永远在项目目录之外**，保证技能/示例目录零膨胀。"""
+    """隔离环境的统一落点：**永远在项目目录之外**，保证技能/示例目录零膨胀。
+
+    Windows 下统一落在用户指定的 D:\临时环境（可用 FD_VENV_HOME 覆盖），
+    与 hermes-desktop 技能一致；非 Windows 回退到用户主目录 .cache，避免硬编码盘符。
+    """
     if os.environ.get("FD_VENV_HOME"):
         return Path(os.environ["FD_VENV_HOME"])
     if os.name == "nt":
+        candidate = Path(r"D:\临时环境")
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except Exception:
+            pass
         root = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
         return Path(root) / "fasthtml-desktop" / "venvs"
     return Path(os.path.expanduser("~")) / ".cache" / "fasthtml-desktop" / "venvs"
