@@ -18,7 +18,7 @@
 | `03-FastCRM` | [FastCRM](https://github.com/predictivelabsai/FastCRM) | MIT | Predictive Labs Ltd |
 | `04-FastERP` | [FastERP](https://github.com/predictivelabsai/FastERP) | MIT | Predictive Labs Ltd |
 | `05-FastHRM` | [FastHRM](https://github.com/predictivelabsai/FastHRM) | MIT | Predictive Labs Ltd |
-| `06-FastInsights` | [FastBI](https://github.com/predictivelabsai/FastBI) | MIT | Predictive Labs Ltd |
+| `06-FastInsights` | [FastBI](https://github.com/predictivelabsai/FastBI)（本地为精简桌面版，见下） | MIT | Predictive Labs Ltd |
 | `09-FastSheets` | [FastSheets](https://github.com/predictivelabsai/FastSheets) | MIT | Predictive Labs Ltd |
 | `10-FastSlides` | [FastSlides](https://github.com/predictivelabsai/FastSlides) | MIT | Predictive Labs Ltd |
 | `11-FastDrive` | [FastDrive](https://github.com/predictivelabsai/FastDrive) | MIT | Predictive Labs Ltd |
@@ -33,6 +33,8 @@
 | `20-FastHelpdesk` | [FastHelpdesk](https://github.com/predictivelabsai/FastHelpdesk) | MIT | Predictive Labs Ltd |
 
 > 说明：上述 Fast\* 项目的**功能/概念**移植自 Frappe 生态（Frappe CRM、ERPNext、Frappe HR 等，上游为 AGPL/GPL），但**代码版权归 Predictive Labs Ltd**（以各自仓库许可证授权）。直接使用 Frappe 上游代码时须遵循其 AGPL/GPL 许可。
+>
+> **06-FastInsights 备注**：本地为 `FastBI` 的**精简桌面版**——移除了上游 Neo4j 图数据库功能（`graph_db.py`、`web/graph_ai.py`、`web/graph_views.py`、`tests/`、`Dockerfile.neo4j`），精简了 `db.py`/`web_app.py`，并新增桌面壳包装（`launcher.py`、`启动.bat`、`main.py`、`start.py`）。与上游 FastBI 非逐字节相同。
 
 ## 2. 非 Predictive Labs（少数）
 
