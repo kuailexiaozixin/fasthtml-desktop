@@ -101,6 +101,12 @@ fasthtml-desktop/
 
 ---
 
+## 第三方内容与合规
+
+`examples/` 目录下的参考实现部分**源自第三方开源项目**（Frappe 生态移植版、完整克隆等），各 example 保留自身许可证与版权声明。其中 `07-genui-weather`、`08-code-assistant` 的上游**未声明许可证**（默认保留所有权利），存在合规风险，不建议再分发。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+---
+
 ## 许可证
 
 [MIT](LICENSE) © kuailexiaozixin
