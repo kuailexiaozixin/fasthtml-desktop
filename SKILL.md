@@ -12,6 +12,13 @@ author: agent
 agent_created: true
 platform: multi
 
+metadata:
+  openclaw:
+    requires:
+      bins:
+        - python
+    homepage: https://github.com/kuailexiaozixin/fasthtml-desktop
+    emoji: "🖥️"
 ---
 
 # fasthtml-desktop
