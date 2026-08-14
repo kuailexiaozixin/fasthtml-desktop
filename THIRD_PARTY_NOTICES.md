@@ -17,7 +17,8 @@
 | `01-Bricksmith` | [bricksmith](https://github.com/predictivelabsai/bricksmith) | ⚠️ 无许可证 | Predictive Labs Ltd |
 | `03-FastCRM` | [FastCRM](https://github.com/predictivelabsai/FastCRM) | MIT | Predictive Labs Ltd |
 | `04-FastERP` | [FastERP](https://github.com/predictivelabsai/FastERP) | MIT | Predictive Labs Ltd |
-| `05-FastHRM` | [FastHRM](https://github.com/predictivelabsai/FastHRM) | MIT | Predictive Labs Ltd |
+| `05-FastHRM` | [FastHRM](https://github.com/predictivelabsai/FastHRM)（精简定制版） | MIT | Predictive Labs Ltd |
+| `05-FastHRM-latest` | [FastHRM](https://github.com/predictivelabsai/FastHRM)（上游完整版，含 ATS 招聘/人才模块） | MIT | Predictive Labs Ltd |
 | `06-FastInsights` | [FastBI](https://github.com/predictivelabsai/FastBI)（本地为精简桌面版，见下） | MIT | Predictive Labs Ltd |
 | `09-FastSheets` | [FastSheets](https://github.com/predictivelabsai/FastSheets) | MIT | Predictive Labs Ltd |
 | `10-FastSlides` | [FastSlides](https://github.com/predictivelabsai/FastSlides) | MIT | Predictive Labs Ltd |

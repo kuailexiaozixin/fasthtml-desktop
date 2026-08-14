@@ -16,7 +16,8 @@ FastHTML + pywebview 桌面应用示例，用纯 Python 演示「写桌面软件
 | `02-TrafficData/` | 交通数据只读看板（predictivelabsai/traffic-data-analysis 完整克隆 + 仅加桌面壳，6 个 Plotly 页） | `fasthtml` `plotly` `pandas` `numpy` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5001，纯离线） |
 | `03-FastCRM/` | 销售 CRM（Frappe CRM 的「服务端 + HTMX」移植） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5006） |
 | `04-FastERP/` | ERP（ERPNext 移植，会计工作区） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5011） |
-| `05-FastHRM/` | HR 系统（Frappe HR 移植，人/时间/薪） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5010） |
+| `05-FastHRM/` | HR 系统（Frappe HR 移植，人/时间/薪，**精简定制版**） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5010） |
+| `05-FastHRM-latest/` | HR + **ATS 招聘 + 人才平台**（predictivelabsai/FastHRM **上游完整版**克隆，含 recruitment/talent/ATS 模块 + migrations，对照精简版 `05-FastHRM`） | `fasthtml` `pywebview` `uvicorn` | 上游源码（未加桌面壳） |
 | `06-FastInsights/` | BI 工具（Frappe Insights 移植，Plotly + AI 文本转 SQL） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动.bat`（默认端口 5008） |
 | `07-genui-weather/` | 生成式 UI 三件套（kafkasl/genUI 完整克隆 + 仅加桌面壳：weather / your_color / hal9000） | `fasthtml` `pywebview` `uvicorn` | 双击 `启动-weather.bat`（weather，默认端口 5001，需 ANTHROPIC_API_KEY）；另含 `启动-your_color.bat` / `启动-hal9000.bat` |
 | `08-code-assistant/` | AI 代码助手（phact/code-assistant 完整克隆 + 仅加桌面壳，生成可运行 Web 应用） | `python-fasthtml==0.5.1`（外置隔离 venv）`pywebview` | 双击 `启动.bat`（默认端口 5001，需 LLM Key） |
