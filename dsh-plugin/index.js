@@ -9,6 +9,12 @@ import { BUNDLED_SKILL_RANK } from "@deepseek-ai/dsh-skill";
 // and the skill is registered on ctx.skills via registerProvider().
 // resourceBase points at the skill repository root so the model can resolve
 // the references/, scripts/, examples/ paths the SKILL.md body cites.
+//
+// NOTE: this is a LOCAL / in-repo plugin, NOT a distributable self-contained
+// npm package. resourceBase resolves to the parent skill repo via a relative
+// path; after `npm publish` the package installs under a profile's
+// node_modules and that path no longer points at the skill repo, so resource
+// resolution breaks. Do not publish to npm in its current form.
 
 const PROVIDER_NAME = "fasthtml-desktop";
 
