@@ -37,12 +37,20 @@
 
 ## 安装 / 使用
 
-Agent Skills 通常已内置在支持该标准的助手中；也可将本仓库添加为 **Skill / Plugin**：
+Agent Skills 通常已内置在支持该标准的助手中（Claude、Codex、灵犀、DeepSeek Harness 等原生支持，可直接读取本仓库）；也可将本仓库显式添加为 **Skill / Plugin**：
 
 ```bash
 # 以支持 AgentSkills 的助手为例（如 Claude Code）
 /plugin marketplace add kuailexiaozixin/fasthtml-desktop
 ```
+
+本仓库同时已打包为**可分发 dsh 插件**（DeepSeek Harness，Cordis Bundle）发布到 npm，在 Harness 中可用一条命令安装：
+
+```bash
+dsh plugin --profile web add dsh-fasthtml-desktop
+```
+
+> 详见下方「作为 dsh 插件使用」章节。
 
 安装后，只需对助手说一句，例如：
 
