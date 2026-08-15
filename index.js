@@ -2,30 +2,26 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { BUNDLED_SKILL_RANK } from "@deepseek-ai/dsh-skill";
 
-// Bundled `fasthtml-desktop` skill provider for DeepSeek Harness.
+// Distributable `fasthtml-desktop` skill provider for DeepSeek Harness.
 //
 // This is the embedded-provider pattern used by the official
-// `@deepseek-ai/dsh-skill-badge` plugin: the SKILL.md body lives in assets/,
-// and the skill is registered on ctx.skills via registerProvider().
-// resourceBase points at the skill repository root so the model can resolve
-// the references/, scripts/, examples/ paths the SKILL.md body cites.
-//
-// NOTE: this is a LOCAL / in-repo plugin, NOT a distributable self-contained
-// npm package. resourceBase resolves to the parent skill repo via a relative
-// path; after `npm publish` the package installs under a profile's
-// node_modules and that path no longer points at the skill repo, so resource
-// resolution breaks. Do not publish to npm in its current form.
+// `@deepseek-ai/dsh-skill-badge` plugin, made SELF-CONTAINED so it can be
+// published to npm and installed by anyone. The npm package IS the full skill
+// repository (references/, scripts/, examples/, docs/, templates/, ...),
+// so resourceBase points at the package root: every relative path the SKILL.md
+// body cites resolves inside the installed package, with no dependency on the
+// publisher's machine or repo location.
 
 const PROVIDER_NAME = "fasthtml-desktop";
 
-// assets/SKILL.md holds a copy of the skill body (kept in sync with SKILL.md).
-const SKILL_BODY_URL = new URL("../assets/SKILL.md", import.meta.url);
+// SKILL.md lives at the package root (same as the skill repo root).
+const SKILL_BODY_URL = new URL("./SKILL.md", import.meta.url);
 
-// The skill root is the parent of this dsh-plugin/ directory, so the body's
-// relative references (references/..., scripts/..., examples/...) resolve.
+// resourceBase = package root, so references/..., scripts/..., examples/...
+// resolve inside the installed npm package.
 const RESOURCE_BASE = {
   kind: "directory",
-  path: fileURLToPath(new URL("../../", import.meta.url)),
+  path: fileURLToPath(new URL("./", import.meta.url)),
 };
 
 const CANDIDATE = {

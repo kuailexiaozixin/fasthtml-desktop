@@ -54,16 +54,16 @@ Agent Skills 通常已内置在支持该标准的助手中；也可将本仓库�
 
 ## 作为 dsh 插件使用
 
-本技能也可打包为 [DeepSeek Harness (dsh)](https://deepseek-ai.github.io/deepseek-harness/) 插件的 **Cordis Bundle**，把技能注册进 dsh 的 `ctx.skills`，让 dsh Agent 在会话中通过 `skill` 工具加载使用。插件源码位于 [`dsh-plugin/`](dsh-plugin/)，**形态**为 Cordis Bundle（Host 侧），**类型**为 skill 插件（嵌入式提供方，参照官方 `dsh-skill-badge`）。
+本技能已发布为 [DeepSeek Harness (dsh)](https://deepseek-ai.github.io/deepseek-harness/) 的 **Cordis Bundle** 插件 **`dsh-fasthtml-desktop`**（npm 包，网络上的任何人均可在其 dsh 中直接安装）。插件把技能注册进 dsh 的 `ctx.skills`，让 dsh Agent 在会话中通过 `skill` 工具加载使用。**形态**为 Cordis Bundle（Host 侧），**类型**为 skill 插件（嵌入式提供方，参照官方 `dsh-skill-badge`）。
 
-> ⚠️ 该插件为「本地 / 仓库内安装」形态，并非可分发 npm 的自包含插件（`resourceBase` 指向本仓库以解析 references 等资源）。详见 [dsh-plugin/README.md](dsh-plugin/README.md) 的「已知局限」。
+本插件为**自包含**的可分发 npm 包：npm 包根 = 技能仓库根，`resourceBase` 指向包根，SKILL.md 及其引用的 references/、examples/ 等资源全部随包安装，不依赖发布者的机器或仓库位置。
 
-### 安装
+### 安装（命令行，从 npm 分发）
 
-**前置**：已安装 `dsh` CLI 与 `pnpm`。在本仓库根目录，把插件装入任意 profile（如 `web`）：
+**前置**：已安装 `dsh` CLI（与 `pnpm`）。从 npm 安装插件并装入任意 profile（如 `web`）：
 
 ```bash
-dsh plugin --profile web add ./dsh-plugin
+dsh plugin --profile web add dsh-fasthtml-desktop
 ```
 
 验证配置层并启动：
@@ -86,8 +86,6 @@ Agent 会调用 `skill` 工具加载本技能，按 `SKILL.md` 的工作流完�
 ```bash
 dsh plugin --profile web remove dsh-fasthtml-desktop
 ```
-
-详见 [dsh-plugin/README.md](dsh-plugin/README.md)。
 
 ---
 
@@ -112,7 +110,9 @@ fasthtml-desktop/
 ├── templates/            # 项目脚手架模板
 ├── scripts/              # 构建、校验、门禁自动化脚本
 ├── docs/                 # 交付清单、术语表、排障
-├── dsh-plugin/           # dsh (DeepSeek Harness) 插件（Cordis Bundle）
+├── package.json          # npm 包声明（dsh-fasthtml-desktop，Cordis Bundle）
+├── index.js              # 嵌入式 skill 提供方
+├── cordis.patch.yml      # dsh bundle patch（注册插件）
 └── examples/README.md
 ```
 

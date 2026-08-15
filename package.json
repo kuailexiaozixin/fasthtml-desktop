@@ -1,0 +1,33 @@
+{
+  "name": "dsh-fasthtml-desktop",
+  "version": "1.4.0",
+  "description": "fasthtml-desktop skill as a distributable DeepSeek Harness (dsh) Cordis Bundle plugin. Registers the fasthtml-desktop Agent Skill (full repo, self-contained) as an embedded skill provider on ctx.skills.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "SKILL.md",
+    "references",
+    "scripts",
+    "docs",
+    "templates",
+    "examples",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "SECURITY.md",
+    "contributing.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-skill": "^0.1.0-rc.6",
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
+}
