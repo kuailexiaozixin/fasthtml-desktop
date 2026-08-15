@@ -184,7 +184,7 @@ fasthtml-desktop/
 
 ## 第三方内容与合规
 
-`examples/` 目录下的参考实现**绝大多数克隆自 Predictive Labs（`predictivelabsai` 组织）的 Fast\* 系列**（代码版权归 Predictive Labs Ltd，多为 MIT），仅少数源自其他项目（`02-TrafficData` Apache、`07-genui-weather`、`08-code-assistant`）。其中 `07`、`08` 的上游**未声明许可证**（默认保留所有权利），存在合规风险，不建议再分发。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`examples/` 目录下的参考实现**绝大多数克隆自 Predictive Labs（`predictivelabsai` 组织）的 Fast\* 系列**（代码版权归 Predictive Labs Ltd，多为 MIT），仅少数源自其他项目（`02-TrafficData` Apache、`07-genui-weather`、`08-code-assistant`）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
 
