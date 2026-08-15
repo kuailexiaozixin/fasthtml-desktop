@@ -52,6 +52,43 @@ Agent Skills 通常已内置在支持该标准的助手中；也可将本仓库�
 
 ---
 
+## 作为 dsh 插件使用
+
+本技能也可打包为 [DeepSeek Harness (dsh)](https://deepseek-ai.github.io/deepseek-harness/) 插件的 **Cordis Bundle**，把技能注册进 dsh 的 `ctx.skills`，让 dsh Agent 在会话中通过 `skill` 工具加载使用。插件源码位于 [`dsh-plugin/`](dsh-plugin/)，**形态**为 Cordis Bundle（Host 侧），**类型**为 skill 插件（嵌入式提供方，参照官方 `dsh-skill-badge`）。
+
+### 安装
+
+在已安装 `dsh` CLI 的机器上，进入本仓库根目录：
+
+```bash
+dsh plugin --profile web add ./dsh-plugin
+```
+
+验证配置层并启动：
+
+```bash
+dsh --profile web --dump-config   # 应看到 "# == dsh-fasthtml-desktop" 层
+dsh web
+```
+
+### 使用
+
+启动 dsh Web UI 后，对 Agent 说一句即可触发，例如：
+
+> 「用 fasthtml-desktop 技能，帮我做一个带 Web 界面的客户管理桌面程序，打包成 EXE。」
+
+Agent 会调用 `skill` 工具加载本技能，按 `SKILL.md` 的工作流完成从脚手架到打包的完整链路。
+
+### 移除
+
+```bash
+dsh plugin --profile web remove dsh-fasthtml-desktop
+```
+
+详见 [dsh-plugin/README.md](dsh-plugin/README.md)。
+
+---
+
 ## 目录结构
 
 ```
