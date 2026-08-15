@@ -50,7 +50,7 @@ Agent Skills 通常已内置在支持该标准的助手中（Claude、Codex、�
 dsh plugin --profile web add dsh-fasthtml-desktop
 ```
 
-> 详见下方「作为 dsh 插件使用」章节。
+> 也可从 [GitHub Release](https://github.com/kuailexiaozixin/fasthtml-desktop/releases) 下载源码归档离线安装。详见下方「作为 dsh 插件使用」章节。
 
 安装后，只需对助手说一句，例如：
 
@@ -80,6 +80,39 @@ dsh plugin --profile web add dsh-fasthtml-desktop
 dsh --profile web --dump-config   # 应看到 "# == dsh-fasthtml-desktop" 层
 dsh web
 ```
+
+### 从 GitHub Release 下载安装
+
+不依赖 npm，可直接从 GitHub Releases 页面下载源码归档离线安装：
+
+```bash
+# 下载源码归档（zip 或 tar.gz）
+curl -L -o fasthtml-desktop.zip \
+  https://github.com/kuailexiaozixin/fasthtml-desktop/archive/refs/tags/v1.4.0.zip
+unzip fasthtml-desktop.zip      # 得到 fasthtml-desktop-1.4.0/（内含 SKILL.md）
+```
+
+解压后有两种安装方式：
+
+**方式一：放入 dsh 技能发现目录（推荐，最简单）**
+
+把目录重命名为技能名（kebab-case，不含版本号）后放进用户技能目录，dsh 启动时即自动发现：
+
+```bash
+mkdir -p ~/.dsh/skills
+mv fasthtml-desktop-1.4.0 ~/.dsh/skills/fasthtml-desktop
+dsh web    # 重启后即可通过 skill 工具加载
+```
+
+> 用户技能目录默认 `<dshHome>/skills`，Windows 下为 `C:\Users\<用户名>\.dsh\skills\`。
+
+**方式二：作为 dsh 插件从本地目录安装**
+
+```bash
+dsh plugin --profile web add /绝对路径/fasthtml-desktop-1.4.0
+```
+
+> `dsh plugin add` 支持本地目录路径（pnpm 语义），与从 npm 安装等价。
 
 ### 使用
 
