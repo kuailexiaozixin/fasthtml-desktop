@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  skill-validate:
+    name: 技能规范校验（gh skill publish --dry-run）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装最新 gh CLI
+        run: |
+          sudo mkdir -p -m 755 /etc/apt/keyrings
+          wget -nv -O /tmp/githubcli.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
+          cat /tmp/githubcli.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
+          sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: 校验技能规范（结构 / 命名 / frontmatter）
+        run: gh skill publish --dry-run .
+
+      - name: 校验技能目录结构
+        run: |
+          python - <<'EOF'
+          import os, sys, glob
+          errors = []
+          for sk in glob.glob('skills/*/SKILL.md'):
+              d = os.path.dirname(sk)
+              name = os.path.basename(d)
+              # 目录名须小写+连字符
+              if not all(c.islower() or c.isdigit() or c == '-' for c in name):
+                  errors.append(f"目录名不规范(须小写+连字符): {d}")
+          if errors:
+              print("\n".join(errors)); sys.exit(1)
+          print("技能目录结构校验通过")
+          EOF
