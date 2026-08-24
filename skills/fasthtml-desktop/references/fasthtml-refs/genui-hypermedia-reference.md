@@ -530,7 +530,6 @@ Plash 是 Answer.ai 的 FastHTML 托管服务（测试阶段），会把整个�
 | 现象 | 原因 | 处理 |
 |------|------|------|
 | `AuthenticationError` | 未设 `ANTHROPIC_API_KEY` | 见步骤 3 |
-| 页面无样式 | MonsterUI 走 CDN，断网即裸奔 | 桌面/离线场景改为本地 CSS（见下节） |
 | 按钮点击无反应 | 按钮不在 `<form>` 内且未写 `hx_post` | 每个 Button 都要显式 `hx_post=send` |
 | 多轮对话「失忆」 | 忘了 `Hidden(msg, name="messages")` | 历史必须随表单回传 |
 | `r[0]` 报 IndexError | LLM 没调工具而是直接回文本 | system prompt 里强制 "Use the tool ..."，并对 `r` 做类型兜底（07 的 weather/main.py 已内置 `if not r:` 兜底，返回提示而非崩溃） |
@@ -556,10 +555,9 @@ Plash 是 Answer.ai 的 FastHTML 托管服务（测试阶段），会把整个�
 从原版 demo 到符合本技能规范的桌面示例，07 实际做了这些事：
 
 1. **加桌面壳、不拆上游**：上游每个 demo 的 `main.py` **原样保留**在 `weather/` `your_color/` `hal9000/` 子目录；外层新增 `main.py`（pywebview 外壳，含 `find_free_port()` / `wait_for_server()` / `SERVER_ONLY=1` 无头模式）与 `claudette_compat.py`（启动包装）。
-2. **去 CDN 依赖**：MonsterUI 的 `Theme.blue.headers()` 会注入 CDN 链接，桌面应用断网即失去样式。示例中仍走 CDN（需联网渲染），离线场景可改为内联 `Style(...)` 或本地 `static/style.css`。
-3. **LLM 接入（非离线兜底）**：桌面壳以极简 `.env` 加载（不引入第三方依赖）读取 `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN`（默认 DeepSeek 端点）或系统环境变量；不设 Key 时**页面可打开、对话会报错**——07 没有离线 mock 生成器，这不是缺陷。
-4. **三件套 `启动-*.bat`（GBK + CRLF）**：`启动-weather.bat` / `启动-your_color.bat` / `启动-hal9000.bat`，分别 `set GENUI_DEMO=...` 后复用 `templates/shared/launcher.py`（自动定位 Python、装依赖、探测 WebView2 Runtime）。bat 名由 `gen_launchers.py` 的 `BAT_NAME` 配置驱动，改名不会被同步工具覆盖。
-5. **双用途 README**：`README.md` 给人看、`README.genui.md` 保留上游原文，既是使用说明，也是给 Agent 看的复刻蓝图（问题→架构→关键代码→坑）。
+2. **LLM 接入（非离线兜底）**：桌面壳以极简 `.env` 加载（不引入第三方依赖）读取 `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN`（默认 DeepSeek 端点）或系统环境变量；不设 Key 时**页面可打开、对话会报错**——07 没有离线 mock 生成器，这不是缺陷。
+3. **三件套 `启动-*.bat`（GBK + CRLF）**：`启动-weather.bat` / `启动-your_color.bat` / `启动-hal9000.bat`，分别 `set GENUI_DEMO=...` 后复用 `templates/shared/launcher.py`（自动定位 Python、装依赖、探测 WebView2 Runtime）。bat 名由 `gen_launchers.py` 的 `BAT_NAME` 配置驱动，改名不会被同步工具覆盖。
+4. **双用途 README**：`README.md` 给人看、`README.genui.md` 保留上游原文，既是使用说明，也是给 Agent 看的复刻蓝图（问题→架构→关键代码→坑）。
 
 ### GenUI 与本技能其它章节的关系
 

@@ -106,9 +106,7 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 | 类别     | 文件                                                | 说明                                |
 | ------ | ------------------------------------------------- | --------------------------------- |
 | CSS 框架 | `references/fasthtml-refs/picocss-reference.md`   | PicoCSS 参考                        |
-| CSS 框架 | `references/fasthtml-refs/monsterui-llms-ctx.txt` | MonsterUI 参考                      |
-| CSS 框架 | `references/fasthtml-refs/faststrap-llms.txt`     | FastStrap 参考                      |
-| 界面设计   | `references/03-ui-design.md`                      | 原型驱动界面设计：三步法、布局模板、CSS 框架选型、交互位置标注 |
+| 界面设计   | `references/03-ui-design.md`                      | 原型驱动界面设计：三步法、布局模板、CSS 框架选型、交互位置标注、审美取向（frontend-design 完整方法论已内联：token 系统、反 AI 三俗、签名记忆点、文案写作，技术栈无关，产出映射进 `Style()`） |
 
 #### Layer 4：补充参考（按需查阅）
 
@@ -310,7 +308,7 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 
 * **界面交付门禁（机器视觉质检 + UI 自动化，必须）**：**必须用机器手段验证界面**：`scripts/ui_window_verify.py`（pywebview 原生窗口 DOM 断言+截图，无需第二个浏览器、零浏览器授权；无头截图自动回退 html2canvas）+ `scripts/ui_automate.py`（UI 交互自动化：点击/输入/导航/断言，验证按钮/表单/状态切换等交互行为正确性）。HTML 结构验证（`ui_audit.py`）通过 ≠ 界面没问题。质检/自动化 exit 1 即禁止发布。
 
-* 注：本技能**不限制运行时使用 CDN**（jsdelivr/unpkg 等外部资源引用允许），CDN 可用性由项目自行决定。纯主观审美不在机器范围，按需人工判断，但**不将人工截图作为验收手段**。
+* 注：纯主观审美不在机器范围，按需人工判断，但**不将人工截图作为验收手段**。
 
 * **测试驱动门禁（逻辑层，必须）**：新业务模块必须 test-first（Red-Green-Refactor），**禁止「先实现后补测」**；bug 修复必须 Prove-It（先写复现测试）；**每次改动后跑全量** **`uv run pytest`** **+ HTML 审计，非零即阻断**。pytest 管「逻辑对不对」，绝不写脆弱的 DOM/渲染单测（那是 `ui_window_verify.py` 的职责）。详见 `references/09-test-driven-development.md`。
 

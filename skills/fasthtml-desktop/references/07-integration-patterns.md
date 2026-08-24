@@ -294,7 +294,6 @@ uvicorn_logger.addHandler(handler)
        return serve_static(fname, get_static_dir() / "vendor")
    ```
    > 实测：冻结 EXE 下 `/vendor/htmx.min.js` 完整返回 **51076 字节**，此路完全可行。`--add-data` 是本技能打包命令已含的，与「内联」互补而非二选一。
-3. **运行时 CDN**（仅联网场景）：本技能不禁止 CDN（见 SKILL.md 质量门禁注），但**离线分发的 EXE 不要用**——接收方无网即白屏。
 
 ❌ 仍要避免：依赖 FastHTML 默认 `static_path` 路由在打包后不可用；`<link href="/styles.css">` 指向开发期文件 → 打包后 404。
 

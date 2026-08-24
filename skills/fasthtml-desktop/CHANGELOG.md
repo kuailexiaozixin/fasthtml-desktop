@@ -1,5 +1,15 @@
 # 变更记录
 
+## 1.6.0 (2026-08-24)
+
+### 新增
+- `references/03-ui-design.md` **完整内联 frontend-design 设计方法论**（fasthtml 上游捆绑方法论，Apache 2.0 授权）：锚定主题、设计原则（Hero 是论点 / 排版承载个性 / 结构即信息 / 刻意动效 / 复杂度匹配愿景 / 慎重文案）、两遍流程（token 系统 → 评审 → build）、克制与自我批评、文案写作五步，产出直接映射 FastHTML `Style()` 与组件，技术栈无关。
+### 修改
+- `SKILL.md` 路由表：移除独立 frontend-design 引用，审美方法论并入 `references/03-ui-design.md`（自包含章节）。
+- 同步本地定制：`references/07-integration-patterns.md`、`references/fasthtml-refs/genui-hypermedia-reference.md` 修订版。
+### 清理
+- 移除 `references/fasthtml-refs/` 下无许可证声明的第三方 llms 上下文文件（`faststrap-llms.txt`、`monsterui-llms-ctx.txt`），保持合规。
+
 ## 1.2.0 (2026-07-19)
 ### 同日深度复核补（二次校验，万无一失）
 - `scripts/check_routes_linkage.py` **修复路由发现盲区**：原实现只识别 `@rt/@ar/@app.route/@router.route`，漏掉 fasthtml 常规写法 `router = APIRouter()` 后 `@router("/path")` —— 此类项目会被误判"未检测到任何后端路由"并错误 exit 2 / 误报 404。改为先扫描 `APIRouter(...)` 赋值建立`变量名→prefix`映射，再对 `@<变量名>`（含 `.route`）装饰器套用对应 prefix。已用三类合成用例验证：prefix 路由匹配(0) / 无 prefix 路由匹配(0) / 真实 404(1)，真实项目回归 0。
