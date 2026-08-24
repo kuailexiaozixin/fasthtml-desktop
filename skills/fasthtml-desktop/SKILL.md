@@ -7,7 +7,7 @@ description: >
   最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
   当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
   "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.4.0"
+version: "1.6.0"
 author: agent
 agent_created: true
 platform: multi

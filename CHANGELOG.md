@@ -10,6 +10,34 @@
 ### 清理
 - 移除 `references/fasthtml-refs/` 下无许可证声明的第三方 llms 上下文文件（`faststrap-llms.txt`、`monsterui-llms-ctx.txt`），保持合规。
 
+## 1.5.1 (2026-08-16)
+
+### 修复
+- 新增 `.gitattributes` 强制 `.bat` 以 CRLF 分发（`*.bat -text`），修复 release 源码 zip 下载后 `.bat` 因 LF 行尾无法在 Windows cmd 运行的问题。
+
+## 1.5.0 (2026-08-16)
+
+### 重构
+- 重组为 `skills/fasthtml-desktop/` 结构以符合 `gh skill publish` 规范（root 结构 → skills/ 嵌套，技能自包含）。
+### 新增
+- CI workflow：`gh skill publish --dry-run` + 目录结构检查（`.github/workflows/ci.yml`）。
+
+## 1.4.0 (2026-08-13)
+
+### 新增
+- 打包为可分发 dsh 插件 `dsh-fasthtml-desktop` 并发布 npm，在 DeepSeek Harness 中一键安装：`dsh plugin --profile web add dsh-fasthtml-desktop`
+- npm 包根 = 技能仓库根，SKILL.md 及 references/examples 等资源全部随包自包含，不依赖发布者机器
+- 形态：Cordis Bundle（Host 侧）；skill 插件（嵌入式提供方，参照官方 `dsh-skill-badge`）
+### 文档
+- README 安装章节补充 dsh 插件一键安装方式、GitHub Release 源码归档下载安装说明
+### 合规
+- 移除第三方上游未声明许可证的合规风险警告说明
+
+## 1.3.0
+
+### 说明
+- 未单独发布：版本号策略变更，1.4.0 起与 dsh 插件版本号对齐（跳过 1.3.0），技能内容迭代并入 1.4.0。
+
 ## 1.2.0 (2026-07-19)
 ### 同日深度复核补（二次校验，万无一失）
 - `scripts/check_routes_linkage.py` **修复路由发现盲区**：原实现只识别 `@rt/@ar/@app.route/@router.route`，漏掉 fasthtml 常规写法 `router = APIRouter()` 后 `@router("/path")` —— 此类项目会被误判"未检测到任何后端路由"并错误 exit 2 / 误报 404。改为先扫描 `APIRouter(...)` 赋值建立`变量名→prefix`映射，再对 `@<变量名>`（含 `.route`）装饰器套用对应 prefix。已用三类合成用例验证：prefix 路由匹配(0) / 无 prefix 路由匹配(0) / 真实 404(1)，真实项目回归 0。
