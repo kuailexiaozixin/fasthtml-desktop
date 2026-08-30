@@ -1,9 +1,5 @@
 # 十六、非功能设计
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十六、非功能设计
 
 ### 性能
 

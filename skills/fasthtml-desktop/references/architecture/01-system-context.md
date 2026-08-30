@@ -1,9 +1,5 @@
 # 一、系统上下文与边界
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 一、系统上下文与边界
 
 ### 系统定位
 

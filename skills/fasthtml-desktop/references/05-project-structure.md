@@ -188,6 +188,26 @@ def process_file(filepath: Path, output_dir: Path) -> dict[str, int]:
 
 ---
 
+## 架构分层与模块化（表示层-业务层-数据层）
+
+所有 `fasthtml-desktop` 项目按 **表示层-业务层-数据层** 三层分层，依赖单向自上而下。这是**模块化、关注点分离、高内聚低耦合**的具体落点：
+
+```
+表示层（FastHTML 视图 / HTMX 组件 / 路由）
+    │  只调业务层接口，不直接写 SQL / 碰数据库
+    ▼
+业务层（services/ 业务逻辑 / 用例编排 / 校验）
+    │  只调数据层 Repository，不依赖 FastHTML UI 细节
+    ▼
+数据层（db/ repository / SQLite / 存储）
+```
+
+- **模块化**：按业务功能拆包（如 `auth`、`billing`、`report`），每个模块高内聚、接口清晰；`components/` 放可复用 UI，`utils/` 放无状态工具，`services/` 放业务规则，`db/` 放数据访问。
+- **关注点分离**：UI（渲染/交互）、业务规则、数据访问、配置读取、日志各自独立成层/模块，禁止把 SQL 写在视图、把业务规则写在路由、把配置硬编码在组件里。
+- **高内聚低耦合**：一个模块只做一件事；模块间经显式函数/接口协作，禁止互相 `import` 内部实现；公共逻辑抽到 `components/`、`utils/` 共享，消除 copy-paste；避免循环依赖。
+- **数据访问收敛**：统一走 Repository 模式（见 `references/architecture/04-data-architecture.md`），业务层不直接写 SQL，便于替换存储与测试。
+- 模块拆分与接口契约流程见 `references/02-module-design.md`；完整架构设计见 `references/architecture/INDEX.md`。
+
 ## 约束总结
 
 | 约束 | 原因 | 例外情况 |

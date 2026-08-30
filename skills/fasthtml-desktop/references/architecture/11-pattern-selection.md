@@ -1,9 +1,5 @@
 # 十一、架构模式选型
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十一、架构模式选型
 
 ### 可选模式
 

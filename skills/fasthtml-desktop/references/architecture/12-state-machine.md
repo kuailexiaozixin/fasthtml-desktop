@@ -1,9 +1,5 @@
 # 十二、状态机设计
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十二、状态机设计
 
 ### 什么是状态机
 

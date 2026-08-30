@@ -7,7 +7,7 @@ description: >
   最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
   当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
   "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.6.0"
+version: "1.7.0"
 author: agent
 agent_created: true
 platform: multi
@@ -401,6 +401,25 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 * **每次** **`file(action=edit)`** **修改代码后，必须执行验证**：`py_compile.compile()` 语法检查 + `python -c "from app import app"` 导入测试。这是防止精确替换导致断裂引用的最后防线
 
 ## 代码与结构原则
+
+### 架构分层铁律（表示层-业务层-数据层）
+
+所有 `fasthtml-desktop` 项目强制按 **表示层（UI/视图）→ 业务层（逻辑）→ 数据层（存储）** 三层分层，依赖方向**单向自上而下**，禁止跨层调用、禁止反向依赖：
+
+```
+表示层（FastHTML 视图 / HTMX 组件 / 路由）
+        │  只调业务层接口，不直接读写数据库
+        ▼
+业务层（业务逻辑 / 用例编排 / 校验）
+        │  只调数据层 Repository，不依赖 FastHTML UI 细节
+        ▼
+数据层（SQLite / Repository / 存储）
+```
+
+- **模块化**：按业务功能拆分模块（如 `auth`、`billing`、`report`），每个模块高内聚（只做自己的事）、低耦合（模块间只经显式接口通信，禁止互相 import 内部实现）。
+- **关注点分离**：UI（渲染/交互）、业务逻辑、数据访问、配置读取、日志各自独立成层，禁止把 SQL 写在视图里、把业务规则写在路由里。
+- **高内聚低耦合**：一个模块/类只承担单一职责；依赖通过接口或函数注入，不产生循环依赖；公共逻辑抽到 `common/` 或 `utils/` 复用，消除 copy-paste。
+- 详细分层与模块划分见 `references/05-project-structure.md`、`references/architecture/INDEX.md` 与 `references/02-module-design.md`。
 
 * 新项目使用 `src` 结构
 

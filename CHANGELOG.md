@@ -1,5 +1,15 @@
 # 变更记录
 
+## 1.7.0 (2026-08-30)
+
+### 新增
+- **架构分层铁律（表示层-业务层-数据层）**：SKILL.md 新增"代码与结构原则 > 架构分层"章节，明确三层分层、依赖单向自上而下、禁止跨层调用；强调模块化、关注点分离、高内聚低耦合。
+- `references/05-project-structure.md` 新增"架构分层与模块化"章节：三层职责、模块化拆包、数据访问收敛 Repository 模式。
+- 强化 `references/architecture/INDEX.md` 与各架构章节，统一架构分层表达。
+
+### 清理
+- 移除 `references/fasthtml-refs/` 下无许可证声明的第三方 llms 上下文文件（`faststrap-llms.txt`、`monsterui-llms-ctx.txt`），保持合规。
+
 ## 1.6.0 (2026-08-24)
 
 ### 新增

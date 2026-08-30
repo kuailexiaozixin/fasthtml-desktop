@@ -1,9 +1,5 @@
 # 二、核心业务流
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 二、核心业务流
 
 ### 什么是业务流
 

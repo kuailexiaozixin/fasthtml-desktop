@@ -1,9 +1,5 @@
 # 十七、MVP 边界表
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十七、MVP 边界表
 
 在项目启动时（需求澄清之后，编码之前），明确以下两张表：
 

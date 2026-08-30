@@ -1,9 +1,5 @@
 # 十五、统一错误处理
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十五、统一错误处理
 
 ### 错误传递契约
 

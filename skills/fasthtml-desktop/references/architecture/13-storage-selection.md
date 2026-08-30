@@ -1,9 +1,5 @@
 # 十三、存储选择表
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十三、存储选择表
 
 ### 什么数据放哪里
 

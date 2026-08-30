@@ -325,7 +325,7 @@ bash scripts/check_refs.sh && bash scripts/scan_deps.sh <proj_dir>
 ./scripts/build_windows_exe.sh <proj_dir> <AppName>     # 末尾冒烟测试 HTTP 200
 ```
 
-> 该顺序由多轮实战归并：原本散落在 SKILL.md ⑦⑧⑨ 各步骤的门禁，统一为**单一可复现的发布流水线**。新增门禁（如 §4.6 链路校验）只往此处追加一行，不改变既有顺序。
+> **单一可复现的发布流水线**：发布前自检按固定顺序执行，新增门禁（如 §4.6 链路校验）只往此列表追加一项，不改变既有顺序。
 
 ## 发布前自检
 

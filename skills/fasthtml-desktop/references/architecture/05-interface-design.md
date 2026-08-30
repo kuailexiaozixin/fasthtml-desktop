@@ -1,9 +1,5 @@
 # 五、接口设计
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 五、接口设计
 
 ### 什么是接口设计
 
@@ -23,7 +19,6 @@ def create_task(title: str, project_id: int):
     except ValidationError as e:
         return Div(P(f"参数错误: {e}"), cls="error")
     return render_task_card(task)
-
 
 # services/task_service.py
 def create(title: str, project_id: int) -> Task:
@@ -52,7 +47,6 @@ from models.task import task_repo
 def list_by_date(date: str) -> list[Task]:
     """调用数据层查询，不涉及任何 UI 逻辑"""
     return task_repo(where="date(created_at) = ?", where_args=[date])
-
 
 # models/task.py
 class Task:

@@ -1,9 +1,5 @@
 # 四、数据架构
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 四、数据架构
 
 ### 数据的存储位置
 

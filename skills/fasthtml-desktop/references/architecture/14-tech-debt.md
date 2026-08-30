@@ -1,9 +1,5 @@
 # 十四、技术债记录
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十四、技术债记录
 
 ### 什么是技术债
 

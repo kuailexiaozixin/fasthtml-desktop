@@ -1,9 +1,5 @@
 # 十八、图生成指南
 
-> 本文档由 `02-architecture.md` 自动拆分生成。
-> 源文件：[../02-architecture.md](../02-architecture.md)
-
-## 十八、图生成指南
 
 在架构设计的不同阶段，针对 fasthtml-desktop 的实际情况，使用以下图表：
 
