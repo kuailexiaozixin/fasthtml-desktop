@@ -1,25 +1,25 @@
-***
-
+---
 name: fasthtml-desktop
 description: >
-FastHTML + pywebview 桌面应用的全生命周期技能。覆盖从需求澄清、FastHTML Web 开发、
-pywebview 桌面壳包装到 PyInstaller 打包交付的完整链路。
-最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
-当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
-"带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
+  FastHTML + pywebview 桌面应用的全生命周期技能。覆盖从需求澄清、FastHTML Web 开发、
+  pywebview 桌面壳包装到 PyInstaller 打包交付的完整链路。
+  最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
+  当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
+  "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
 version: "1.8.0"
 author: agent
-agent\_created: true
+agent_created: true
 platform: multi
 
 metadata:
-openclaw:
-requires:
-bins:
-\- python
-homepage: <https://github.com/kuailexiaozixin/fasthtml-desktop>
-emoji: "🖥️"
-------------
+  openclaw:
+    requires:
+      bins:
+        - python
+    homepage: https://github.com/kuailexiaozixin/fasthtml-desktop
+    emoji: "🖥️"
+---
+
 
 # fasthtml-desktop
 
