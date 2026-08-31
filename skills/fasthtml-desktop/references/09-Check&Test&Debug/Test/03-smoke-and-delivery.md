@@ -205,7 +205,7 @@ python scripts/ui_window_verify.py --url http://127.0.0.1:5001 --show
 
 htmx / surreal 是 SPA 式更新：**断言 DOM / 截图前必须等渲染稳定**，否则会误报「元素缺失 / 空白页」。本脚本在 `run()` 中已内置等待：页面加载后 sleep 缓冲 + HTMX 渲染周期。
 
-**纪律**：任何自定义视觉质检脚本都必须先等 DOM 稳定再 `evaluate_js`，绝不能「导航完立刻查」。这是降低 flaky 的第一原则（与 `09-test-driven-development.md` §9.1 重复跑纪律互补）。
+**纪律**：任何自定义视觉质检脚本都必须先等 DOM 稳定再 `evaluate_js`，绝不能「导航完立刻查」。这是降低 flaky 的第一原则（与 `../Debug/01-debug-discipline.md` §9.1 重复跑纪律互补）。
 
 退出码：
 - `0` = 通过（或仅有 UX 提示）

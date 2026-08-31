@@ -30,17 +30,9 @@ python -c "import sys; sys.path.insert(0, 'src'); from <pkg>.app import app; pri
 
 此步骤可以捕获变量名引用断裂（如移除 `from datetime import date as _today` 但未更新 `_today.today()` 调用）等语法检查发现不了的运行时错误。
 
-### 1.5 测试门禁（pytest，逻辑层，不可跳过）
+### 1.5 测试门禁（pytest，逻辑层）
 
-业务逻辑正确性由 `pytest` 守护——这是工作流 ⑥-β 测试驱动（详见 `09-test-driven-development.md`）的落地门禁，**与本文的 UI/视觉门禁互补、不重叠**。
-
-```bash
-uv run pytest          # 单元 + 集成 + 数据驱动全绿；非零退出禁止进入 ⑧ 打包
-```
-
-- **覆盖范围**：纯逻辑（validator / organizer / excel 变换 / config 解析）、跨边界路由（用 `starlette.testclient.TestClient`，无需端口/浏览器）、数据驱动参数化。
-- **分层边界**：pytest 管「逻辑对不对」；UI/视觉正确性交给 §4 `ui_audit.py` 与测试项五 `ui_window_verify.py`，**pytest 绝不写脆弱的 DOM/渲染单测**。
-- **回归纪律**：任何代码改动（新增/修 bug/重构）后必须重跑全量；详见 `09-test-driven-development.md` §9。
+业务逻辑正确性由 `pytest` 守护，属 **Test 层逻辑门禁**，完整方法论见 `../Test/01-test-driven-development.md`（本文件为 Check 静态关卡，不含 pytest 正文）。
 
 ### 2. Ruff 代码检查
 
@@ -64,7 +56,7 @@ uv run myapp
 
 > 适用于 FastHTML 桌面应用的所有 UI 页面。
 >
-> **执行方式**：纯 Python 审计（无需 Node.js）：`python scripts/ui_audit.py http://127.0.0.1:PORT`；有窗口环境时再叠加 pywebview 原生窗口视觉质检（见 `04-smoke-and-delivery.md` 测试项五）。
+> **执行方式**：纯 Python 审计（无需 Node.js）：`python scripts/ui_audit.py http://127.0.0.1:PORT`；有窗口环境时再叠加 pywebview 原生窗口视觉质检（见 `../Test/03-smoke-and-delivery.md` 测试项五）。
 
 每次 UI 代码写入后，按顺序执行以下检查。
 

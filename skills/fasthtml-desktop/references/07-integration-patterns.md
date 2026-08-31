@@ -326,7 +326,7 @@ uvicorn_logger.addHandler(handler)
           time.sleep(1)
       return False
   ```
-- 完整 headless 冒烟测试门禁见本技能 `references/quality-check/04-smoke-and-delivery.md`（验证窗口 + 业务健康端点，防假绿）。
+- 完整 headless 冒烟测试门禁见本技能 `references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md`（验证窗口 + 业务健康端点，防假绿）。
 
 ---
 

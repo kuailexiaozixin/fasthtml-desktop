@@ -192,4 +192,4 @@ def hub_data():                       # 同步 def：本身已在线程池
 
 - ⑥ 编码：写完处理函数后，对照 §三 检查未注解参数、§四 检查结构体类型是否正确、§五 检查是否用 handler 引用替代了字符串 URL、§七 检查 `async def` 里有无裸阻塞调用
 - ⑦ 运行验证：`uv run pytest` 会捕获签名错导致的 400 错误
-- quality-check/02-ui-audit.md §4.5：多文件路由的 APIRouter 相关陷阱（函数名→路由映射 + get/post 命名陷阱）
+- 09-Check&Test&Debug/Check/02-ui-audit.md §4.5：多文件路由的 APIRouter 相关陷阱（函数名→路由映射 + get/post 命名陷阱）

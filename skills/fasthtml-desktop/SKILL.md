@@ -1,25 +1,25 @@
----
+***
 
 name: fasthtml-desktop
 description: >
-  FastHTML + pywebview 桌面应用的全生命周期技能。覆盖从需求澄清、FastHTML Web 开发、
-  pywebview 桌面壳包装到 PyInstaller 打包交付的完整链路。
-  最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
-  当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
-  "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.7.0"
+FastHTML + pywebview 桌面应用的全生命周期技能。覆盖从需求澄清、FastHTML Web 开发、
+pywebview 桌面壳包装到 PyInstaller 打包交付的完整链路。
+最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
+当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
+"带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
+version: "1.8.0"
 author: agent
-agent_created: true
+agent\_created: true
 platform: multi
 
 metadata:
-  openclaw:
-    requires:
-      bins:
-        - python
-    homepage: https://github.com/kuailexiaozixin/fasthtml-desktop
-    emoji: "🖥️"
----
+openclaw:
+requires:
+bins:
+\- python
+homepage: <https://github.com/kuailexiaozixin/fasthtml-desktop>
+emoji: "🖥️"
+------------
 
 # fasthtml-desktop
 
@@ -48,108 +48,9 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 1. **禁用依赖静态 HTML 入口的工具**（注入式质检、`/live` 热重载、SSR 预渲染等）。
 2. **正确路径是「真实渲染引擎」驱动**：用 pywebview 原生窗口质检与自动化（`scripts/ui_window_verify.py`、`scripts/ui_automate.py`），无需第二个浏览器；无 GUI 时用 headless HTML 审计（`scripts/ui_audit.py`）。两者都**非**解析静态 HTML。
 
-
-> pywebview 导入/启动、质检脚本用法、DOM 断言检查能力、像素截图等技术要点见 `references/quality-check/05-ui-verification-details.md`。
-
-***
-
-## 目录结构与主题路由
-
-> 原则：先按意图命中下表，再读对应文件；命中多个时优先读更具体的那个。
-
-### 入口与决策
-
-* **不清楚该从哪里开始** / 想了解完整流程：`./docs/glossary.md` → 读完回归此表
-
-* **需求澄清**、首轮话术、必问问题：`./references/01-need-discovery.md`
-
-### 环境与项目初始化
-
-* **必须先运行** `./scripts/ensure_uv_env.sh` 或 `./scripts/ensure_uv_env.ps1`：检查/安装 uv、配置镜像、安装 Python。任何新建项目的第一步，**禁止跳过**
-
-* 项目初始化、蓝图实例化：`./scripts/bootstrap_project.sh` 或 `./scripts/bootstrap_project.ps1`
-
-* 依赖管理（uv add、uv sync）：`./references/04-agent-execution-and-env.md`
-
-### 架构设计
-
-* **架构设计**（18 个章节，覆盖系统上下文、核心业务流、模块分解、数据架构、接口设计、统一架构框架、场景驱动的架构类型选择等）：`./references/architecture/INDEX.md`
-
-* **功能模块设计**（功能-模块分配矩阵、模块接口契约、模块依赖图、数据流图）：`./references/02-module-design.md`
-
-### 编码与结构规范
-
-文件体系分为四个层级，按顺序自上而下查阅。**Layer 1 为前置必读**，后面层级根据任务需要按需引用。
-
-#### Layer 1：FastHTML 核心 API（前置必读）
-
-> **PyPI 包名**：本框架在 PyPI 上的发行包名为 **`python-fasthtml`**（导入名仍为 `fasthtml`，即 `pip install python-fasthtml` 后使用 `from fasthtml.common import *`）。PyPI 上没有名为 `fasthtml` 的发行包。
-
-| 文件                                               | 说明                                                              | 优先级            |
-| ------------------------------------------------ | --------------------------------------------------------------- | -------------- |
-| `references/fasthtml-refs/fasthtml-llms-ctx.txt` | **FastHTML 官方 LLMs 上下文**（llms-ctx-full，约 10,100 行），完整 API 签名与示例 | **写任何代码前必须先读** |
-| `references/fasthtml-refs/fastlite-llms.txt`     | **FastLite 官方 LLMs 上下文**，FastLite API 签名与用法示例                   | 数据库操作时查阅       |
-
-#### Layer 2：框架集成与项目结构
-
-| 文件                                      | 说明                                                                                                                                                           |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `references/05-project-structure.md`    | 项目结构、代码规范、分层原则                                                                                                                                               |
-| `references/10-ft-handlers-typing.md`   | **FastHTML 参数绑定规则**：绑定顺序、特殊参数名、方法选择、结构化类型、常见签名错误                                                                                                             |
-| `references/06-pywebview-shell.md`      | pywebview 桌面壳（**跨平台后端**：Edge/mshtml/cocoa/gtk/qt、窗口控制、JS 桥接、对话框、菜单、**外链行为** **`webbrowser.open`** **内部实现**、DOM 操作、`window.state` 共享状态、透明窗口、拖拽区、文件下载/拖放、系统托盘） |
-| `references/pywebview-examples/`        | **60 个已验证示例脚本**（A 类高价值缺口修正 / B 类 API 覆盖 / D 类增补实证 / E 类跨平台专属），每个文件含 FastHTML+pywebview 适配注释头，py\_compile 全通过                                                 |
-| `references/07-integration-patterns.md` | **三者协同**（fasthtml + pywebview + PyInstaller）：启动顺序、端口协商、双入口、优雅退出                                                                                              |
-| `references/11-cross-platform.md`       | **多端适配总览**：后端矩阵（T1 实证）、各 OS 打包矩阵（Windows PyInstaller / macOS py2app / Linux AppImage）、cefpython3 限制、pywebview 自动 hook、DRY-RUN 铁律                             |
-
-#### Layer 3：UI 框架与设计质量
-
-| 类别     | 文件                                                | 说明                                |
-| ------ | ------------------------------------------------- | --------------------------------- |
-| CSS 框架 | `references/fasthtml-refs/picocss-reference.md`   | PicoCSS 参考                        |
-| 界面设计   | `references/03-ui-design.md`                      | 原型驱动界面设计：三步法、布局模板、CSS 框架选型、交互位置标注、审美取向（frontend-design 完整方法论已内联：token 系统、反 AI 三俗、签名记忆点、文案写作，技术栈无关，产出映射进 `Style()`） |
-
-#### Layer 4：补充参考（按需查阅）
-
-| 文件                                                       | 说明                                                                        |
-| -------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `references/fasthtml-refs/genui-hypermedia-reference.md` | GenUI 超媒体参考                                                               |
-| `references/12-fasthtml-fastapi.md`                      | **FastAPI 集成**：在 fasthtml 中挂载 FastAPI 子应用，创建 RESTful API 并自动生成 OpenAPI 文档 |
-
-### 质量检查
-
-* 代码检查、运行验证、语法门禁、冒烟测试、界面验证（机器视觉质检：`ui_window_verify.py` DOM 断言+截图；UI 交互自动化：`ui_automate.py` 点击/输入/导航/断言；两者均 pywebview 原生、零额外浏览器、零浏览器授权）：`./references/quality-check/INDEX.md`
-
-* 测试驱动开发（单元/集成/数据驱动/回归，pytest）：`./references/09-test-driven-development.md`
-
-* **测试夹具 schema 对齐**（防 fixture rot，insert 字典键校验）：`./docs/troubleshooting.md` 第五章
-
-* FastHTML 参数绑定与签名规范（绑定顺序、特殊参数名、方法选择、结构化类型）：`./references/10-ft-handlers-typing.md`
-
-### 打包与交付
-
-* **打包的硬规则、深入资料索引与构建脚本**统一见下方 `### 打包` 一节（该节内含 `--onefile` / 最小 venv / hidden-import 等铁律，以及 `08-packaging.md`、跨平台矩阵、各 OS 构建脚本的索引）。
-
-* **启动器标准交付物（启动.bat + 决策层 + 双用途 README）完整规则与理由**见 `references/launch-standard-deliverable.md`（SKILL.md 仅留要点）。
-
-### 参考实现
-
-* **项目骨架（空白模板）**：`./templates/project-blueprints/web-desktop-exe/` —— 已内置 **`启动.bat`（一键启动器）** + **双用途** **`README.md.tmpl`** + `requirements.txt`，`bootstrap_project` 生成项目时自动实例化，无需手工补文件。
-
-* **共享入口模板**：`./templates/shared/main.py`（修改后运行 `scripts/sync_examples.sh` 同步到各示例）
-
-* **原型模板**：`./templates/prototype-app.py.tmpl`（含搜索表单/结果表格/分页/统计栏完整骨架）
-
-* **完整示例**（业务场景参考语料）：`./examples/` —— 20 个真实业务应用（知识库 / 交通看板 / CRM / ERP / HRM / BI / 在线表格 / 演示文稿 / 文件管理 / 法务助手 / 学习管理 / 会议协作 / 邮件客户端 / 生成式 UI / 代码助手 / 文档编辑器 / 企业服务管理 / 按揭服务权管理 / 文档工作流 / 客服工单），是**最值得直接借鉴的范式样本**：入口壳、分层组织、FastHTML+HTMX 组件化、标准库优先、认证、打包等均已落地可跑。
-
-  > **复用优先（非必要不自造轮子）**：在 ① 需求澄清 / ② 架构设计 / ⑥ 编码 各阶段，**先扫一遍** **`examples/`** **有没有可复用的技术**——入口壳（`templates/shared/main.py`）、认证模块（`web/account_auth.py`）、`_bootstrap_db()` 约定、扁平布局、启动器套件、`build_fast_example.py` 打包 hidden-import 清单等，能直接套用就不重写。examples 里的每一行都在「教」未来模型，照抄优于自造。
-
-  > **完整目录（业务场景 / 默认端口 / 技术要点 / 各示例差异）见** **`./examples/README.md`**——该文件是 examples 的权威索引，本 SKILL.md 不重复罗列细节。
-
-* 术语解释：`./docs/glossary.md`
+> pywebview 导入/启动、质检脚本用法、DOM 断言检查能力、像素截图等技术要点见 `references/09-Check&Test&Debug/Test/04-ui-tools.md`。
 
 ***
-
-> 技术栈全景见 `references/11-cross-platform.md`。
 
 ## 完整工作流（= 后续 AI 的最低执行清单）
 
@@ -199,7 +100,7 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
   ├─ ⑤ 界面设计（先读 03-ui-design.md）
   │    用 FastHTML 写出纯界面原型，预览后迭代
   │    设计质量评审详见「编码与结构规范 > Layer 3」
-  │    ▶ UI 行为变更须同步更新/新增对应测试；界面交付以 **机器视觉质检（UI 自动化测试）** 为唯一机器手段：`scripts/ui_window_verify.py`（pywebview 原生窗口 + 可选 html2canvas 无头截图，详见 09-test-driven-development.md §1）
+  │    ▶ UI 行为变更须同步更新/新增对应测试；界面交付以 **机器视觉质检（UI 自动化测试）** 为唯一机器手段：`scripts/ui_window_verify.py`（pywebview 原生窗口 + 可选 html2canvas 无头截图，详见 09-Check&Test&Debug/Test/01-test-driven-development.md §1）
   │    ▶ 产出：prototype_app.py（可运行纯界面原型）
   │
   ├─ ⑥ 编码（先读 fasthtml-refs/fasthtml-llms-ctx.txt【前置必读】 + 10-ft-handlers-typing.md【参数绑定规则】 + 07-integration-patterns.md）
@@ -207,7 +108,7 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
   │    最小可运行版本先行：先跑通空壳确认技术栈兼容，再加业务
   │    src/main.py 不动（pywebview + uvicorn 入口）
   │    ▶ **写业务代码前先查 examples 有没有现成实现**：认证/登录（`web/account_auth.py`）、FastHTML+HTMX 局部刷新、FastAPI 子应用挂载、标准库导出、PyInstaller hidden-import 套路等，能 copy-adapt 就不重写
-  │    ▶ **⑥-β 测试驱动（详见 09-test-driven-development.md）**：每新增业务模块先写失败测试（Red-Green-Refactor）；
+  │    ▶ **⑥-β 测试驱动（详见 09-Check&Test&Debug/Test/01-test-driven-development.md）**：每新增业务模块先写失败测试（Red-Green-Refactor）；
   │      修 bug 走 Prove-It（先写复现测试）；禁止「先实现后补测」。
   │    ▶ 产出：src/app.py + 各模块文件 + tests/ 对应测试
   │
@@ -216,20 +117,20 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
   │    [阶段一：持续验证]（每次改代码后立即执行）
   │    ▶ `py_compile` 语法检查 + `python -c "from app import app"` 导入测试
   │    ▶ `uv run pytest` 单元/集成测试全绿（逻辑门禁，非零即阻断）
-  │    ▶ 语法 / 导入 / 静态检查细则见 references/quality-check/01-static-code-checks.md
+  │    ▶ 语法 / 导入 / 静态检查细则见 references/09-Check&Test&Debug/Check/01-static-code-checks.md
   │
   │    [阶段二：全面验证]（功能开发完成后执行）
   │    ▶ **用 `启动.bat` 启动应用**，自测正常+异常路径
-  │    ▶ UI 反模式检查（`scripts/ui_audit.py`，纯 headless，禁止跳过；自动抓取 `<link rel=stylesheet>` 外部 CSS 纳入审计，CSS 外部化项目不再误报；可用 `--ignore-ban "禁令名/序号/子串"` 豁免已知误报；反模式规则详见 references/quality-check/02-ui-audit.md）
+  │    ▶ UI 反模式检查（`scripts/ui_audit.py`，纯 headless，禁止跳过；自动抓取 `<link rel=stylesheet>` 外部 CSS 纳入审计，CSS 外部化项目不再误报；可用 `--ignore-ban "禁令名/序号/子串"` 豁免已知误报；反模式规则详见 references/09-Check&Test&Debug/Check/02-ui-audit.md）
   │    ▶ 机器视觉质检（`scripts/ui_window_verify.py`：DOM 断言+可选截图；HTML 结构验证通过≠界面没问题；无 GUI 强制 HTML 结构验证）
   │    ▶ UI 交互自动化（`scripts/ui_automate.py`：点击/输入/导航/断言，验证交互行为正确性）
-  │    ▶ 质检脚本详细用法见 `references/quality-check/05-ui-verification-details.md`
+  │    ▶ 质检脚本详细用法见 `references/09-Check&Test&Debug/Test/04-ui-tools.md`
   │    ▶ 测试夹具 schema 对齐：新增测试须用 `scripts/fixture_schema_helper.py` 校验 insert 键全部存在于真实 db 列（见 `docs/troubleshooting.md` 第五章）
   │
   │    [阶段三：预发布门禁]（打包前执行一次）
-  │    ▶ 前端→后端路由链路校验（`scripts/check_routes_linkage.py`：捕获前端引用但后端未注册的路由，防运行时 404。exit 1 = 阻断发布；规则详见 references/quality-check/03-route-hygiene.md）
+  │    ▶ 前端→后端路由链路校验（`scripts/check_routes_linkage.py`：捕获前端引用但后端未注册的路由，防运行时 404。exit 1 = 阻断发布；规则详见 references/09-Check&Test&Debug/Check/03-route-hygiene.md）
   │    ▶ 统一发布门禁（`scripts/release_gate.py`：串联 pytest → check_routes → check_routes_linkage → UI 视觉质检 → verify_imports → check_refs，全绿才放行）
-  │    ▶ 冒烟测试（HTTP 200 + 窗口句柄存在 + 后台业务健康端点可达；详见 references/quality-check/04-smoke-and-delivery.md）
+  │    ▶ 冒烟测试（HTTP 200 + 窗口句柄存在 + 后台业务健康端点可达；详见 references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md）
   │
   │    ⚠ **核心节流点**：禁止「绕过 启动.bat、未充分验证就直接打包」。打包只是交付的最后一步，不是验证手段。
   │    ⚠ **打包后又改代码**：不立即重新打包，先用 `启动.bat` 跑源码验证改动，并主动提示用户当前 EXE 为旧快照；用户确认前不重打包。
@@ -249,20 +150,197 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
       ▶ 产出：已填写的交付清单 + 双用途 README（用户说明书 + LLM 克隆说明书）
 ```
 
-### 各步骤产出物清单
+### 分步执行详解（唯一执行顺序；每步内联必读参考 / 产出物 / 验收标准）
 
-| 步骤         | 产出物                                                                                                                                    | 验收标准                                                                                                                                                |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ① 需求澄清     | 需求优先级表                                                                                                                                 | Must/Should/Could/Won't 已分级，MVP 清单已确认                                                                                                               |
-| ② 架构设计     | `docs/architecture.md`                                                                                                                 | 含 MVP 边界表 + 模块分解 + 业务流图 + 接口设计                                                                                                                      |
-| ②-α 功能模块设计 | `docs/modules.md`                                                                                                                      | 含功能-模块分配矩阵 + 模块接口契约 + 模块依赖图 + 数据流图                                                                                                                  |
-| ③ 环境准备     | uv + Python + 镜像已配置                                                                                                                    | `uv --version` 正常输出                                                                                                                                 |
-| ④ 项目初始化    | 骨架 + `.gitignore` + `.env.example` + **`启动.bat`** + **`launcher.py`** **+** **`launcher.json`** + 双用途 `README.md` + `requirements.txt` | 双击 `启动.bat` 可自动建项目 venv 并装依赖启动（依赖装进项目内 venv，`use_venv=true`，不污染全局 Python）；`uv sync` 成功                                                              |
-| ⑤ 界面设计     | `prototype_app.py`                                                                                                                     | 可运行预览，含模拟数据，确认布局后进入编码                                                                                                                               |
-| ⑥ 编码       | `src/app.py` + 各模块文件 + `tests/` 对应测试                                                                                                   | 语法检查通过 + 模块导入测试通过 + **对应单元/集成测试存在且通过（Red-Green-Refactor，禁止先实现后补测）**                                                                                 |
-| ⑦ 质量门禁     | pytest 报告 + 审计报告 + 质检报告 + 路由链路报告                                                                                                       | **三个阶段全通过**：持续验证（pytest 全绿）→ 全面验证（机器视觉质检通过 + 启动.bat 主流程走通）→ 预发布门禁（路由链路校验通过 + 冒烟测试通过）                                |
-| ⑧ 打包       | `dist/*.exe`（Windows；macOS/Linux 产物见 `references/11-cross-platform.md`）                                                                | **打包前 pytest 全绿门禁通过** + 冒烟测试通过（HTTP 200 + 窗口正常）+ 跨平台目标遵守 DRY-RUN（非当前 OS 仅命令预演）                                                                      |
-| ⑨ 交付       | `delivery-checklist.md` 已填写 + `README.md`（双用途：用户说明书 + LLM 克隆说明书）                                                                       | 用户双击 `启动.bat` 即可独立使用，无需额外配置；README 可对照克隆出同等应用                                                                                                       |
+#### ① 需求澄清
+
+* **任务**：问清楚做什么、输入输出、给谁用；产出需求优先级表。
+
+* **必读**：`references/01-need-discovery.md`（首轮话术、必问问题、可测试验收标准捕获）。
+
+* **复用**：扫 `examples/README.md`，若已有同类业务场景（CRM/ERP/表格/文件管理等）直接复用其业务建模与入口范式，非必要不自造轮子。
+
+* **产出物**：需求优先级表（MoSCoW 分级）。
+
+* **验收标准**：Must/Should/Could/Won't 已分级，MVP 清单已确认。
+
+#### ② 架构设计
+
+* **任务**：定 MVP 边界、选架构模式、画业务流图。
+
+* **必读**：`references/architecture/INDEX.md`（18 章导航总入口）。按项目复杂度选读章节：
+
+  * 简单项目：`references/architecture/01-system-context.md`（系统上下文与边界）、`references/architecture/10-checklist.md`（设计检查清单）、`references/architecture/17-mvp-boundary.md`（MVP 边界表）
+
+  * 中等复杂度：另加 `references/architecture/03-module-decomposition.md`（模块分解）、`references/architecture/05-interface-design.md`（接口设计）、`references/architecture/07-scenario-driven.md`（场景驱动的架构类型选择）
+
+  * 复杂企业应用：01-18 全部章节（02 核心业务流 `references/architecture/02-business-flow.md` / 04 数据架构 `references/architecture/04-data-architecture.md` / 06 统一架构框架 `references/architecture/06-unified-framework.md` / 08 ADR `references/architecture/08-adr.md` / 09 常见架构错误 `references/architecture/09-common-mistakes.md` / 11 架构模式选型 `references/architecture/11-pattern-selection.md` / 12 状态机 `references/architecture/12-state-machine.md` / 13 存储选择 `references/architecture/13-storage-selection.md` / 14 技术债 `references/architecture/14-tech-debt.md` / 15 错误处理 `references/architecture/15-error-handling.md` / 16 非功能设计 `references/architecture/16-non-functional.md` / 18 图生成指南 `references/architecture/18-diagram-guide.md`）
+
+* **复用**：先看 `examples/` 同类应用的架构（扁平 / 分层 / 插件化 / 入口壳 `templates/shared/main.py`），直接套用成熟范式。
+
+* **产出物**：`docs/architecture.md`（MVP 边界表 + 模块分解 + 业务流图 + 接口设计）。
+
+* **验收标准**：含 MVP 边界表 + 模块分解 + 业务流图 + 接口设计。
+
+#### ②-α 功能模块设计
+
+* **任务**：功能-模块分配矩阵 → 模块接口契约 → 模块依赖图 → 数据流图。
+
+* **必读**：`references/02-module-design.md`。
+
+* **要点**：模块接口契约即测试契约，每个契约点对应一个 ⑥ 的测试用例。
+
+* **产出物**：`docs/modules.md`（功能-模块矩阵 + 接口契约 + 依赖图 + 数据流图）。
+
+* **验收标准**：含功能-模块分配矩阵 + 模块接口契约 + 模块依赖图 + 数据流图。
+
+#### ③ 环境准备
+
+* **任务**：安装 uv、配置镜像、安装 Python。
+
+* **必读**：`references/04-agent-execution-and-env.md`（依赖管理 / 编码铁律 / 命令超时）。
+
+* **执行**：先跑 `scripts/ensure_uv_env.sh`（或 `.ps1`），任何新建项目第一步，禁止跳过。
+
+* **产出物**：uv + Python + 镜像已配置。
+
+* **验收标准**：`uv --version` 正常输出。
+
+#### ④ 项目初始化
+
+* **任务**：生成 web-desktop-exe 骨架 → `uv add` 补业务依赖 → `uv sync`。
+
+* **执行**：跑 `scripts/bootstrap_project.sh`（或 `.ps1`）生成骨架，禁止从零手写 pyproject.toml。
+
+* **标准交付物**：骨架 + `.gitignore` + `.env.example` + `启动.bat` + `launcher.py` + `launcher.json` + 双用途 `README.md` + `requirements.txt`。
+
+* **产出物**：可双击 `启动.bat` 的完整骨架。
+
+* **验收标准**：双击 `启动.bat` 自动建项目 venv 并装依赖启动（依赖装进项目内 venv，`use_venv=true`，不污染全局 Python）；`uv sync` 成功。
+
+#### ⑤ 界面设计
+
+* **任务**：用 FastHTML 写出纯界面原型，预览后迭代。
+
+* **必读**：`references/03-ui-design.md`（原型驱动三步法、布局模板、CSS 框架选型、交互位置标注）；`references/fasthtml-refs/picocss-reference.md`（PicoCSS 参考）。
+
+* **要点**：UI 行为变更须同步更新/新增测试；界面交付以机器视觉质检（`scripts/ui_window_verify.py`）为唯一机器手段。
+
+* **产出物**：`prototype_app.py`（可运行纯界面原型）。
+
+* **验收标准**：可运行预览，含模拟数据，确认布局后进入编码。
+
+#### ⑥ 编码
+
+* **任务**：在 `src/app.py` 写业务逻辑；最小可运行版本先行；`src/main.py` 不动。
+
+* **必读（前置）**：`references/fasthtml-refs/fasthtml-llms-ctx.txt`（FastHTML 官方 LLMs 上下文，写任何代码前必读）；`references/10-ft-handlers-typing.md`（参数绑定规则）；`references/07-integration-patterns.md`（fasthtml+pywebview+PyInstaller 协同）。
+
+* **必读（按需）**：
+
+  * `references/fasthtml-refs/fastlite-llms.txt`（数据库操作时）
+
+  * `references/06-pywebview-shell.md`（pywebview 桌面壳：后端矩阵 / 窗口控制 / JS 桥接 / 对话框 / 菜单 / DOM / 拖拽 / 系统托盘）
+
+  * `references/fasthtml-refs/genui-hypermedia-reference.md`（GenUI 超媒体）
+
+  * `references/12-fasthtml-fastapi.md`（FastAPI 集成）
+
+  * `references/pywebview-examples/`（59 个已验证示例脚本，按能力域查阅）：
+
+    * 窗口基础/生命周期：`simple_browser.py`, `multiple_windows.py`, `destroy_window.py`, `hide_window.py`, `confirm_close.py`, `window_title_change.py`, `change_url.py`, `get_current_url.py`, `http_server.py`, `localhost_ssl.py`
+
+    * 窗口外观/行为：`frameless.py`, `transparent.py`, `fullscreen.py`, `toggle_fullscreen.py`, `on_top.py`, `min_size.py`, `resize.py`, `move_window.py`, `icon.py`, `vibrancy.py`, `window_state.py`, `state.py`, `focus.py`, `screens.py`, `loading_animation.py`, `localization.py`
+
+    * JS 桥接 / DOM：`js_api.py`, `expose.py`, `evaluate_js.py`, `evaluate_js_async.py`, `run_js.py`, `get_elements.py`, `dom_events.py`, `dom_manipulation.py`, `dom_traversal.py`, `dom_state_dragregion_verified.py`, `load_html.py`, `load_css.py`, `headers.py`, `user_agent.py`, `settings.py`, `debug.py`, `remote_debugging.py`, `multiprocess.py`
+
+    * 对话框 / 文件 / 下载：`open_file_dialog.py`, `save_file_dialog.py`, `confirmation_dialog.py`, `downloads.py`, `drag_drop.py`, `links.py`, `cookies.py`
+
+    * 菜单 / 托盘 / 集成：`menu.py`, `pystray_icon.py`, `drag_region.py`, `events.py`
+
+    * 跨平台 / 后端专用：`cef.py`, `qt_test.py`, `py2app_setup.py`, `multiple_servers.py`
+
+* **测试驱动**：`references/09-Check&Test&Debug/Test/01-test-driven-development.md`（Red-Green-Refactor / 测试金字塔 / TestClient / 数据驱动 / Mock / 回归纪律）。
+
+* **复用**：写业务代码前先查 `examples/`（认证 `web/account_auth.py`、HTMX 局部刷新、FastAPI 挂载、PyInstaller hidden-import 套路）。
+
+* **产出物**：`src/app.py` + 各模块文件 + `tests/` 对应测试。
+
+* **验收标准**：语法检查 + 导入测试 + 对应单元/集成测试存在且通过（Red-Green-Refactor，禁止先实现后补测）。
+
+#### ⑦ 质量门禁（打包前必过，三阶段按序执行）
+
+* **总入口**：`references/09-Check&Test&Debug/INDEX.md`（Check/Test/Debug 三层心智图）。
+
+* **Check 层（静态关卡，不运行完整应用）**，入口 `references/09-Check&Test&Debug/Check/INDEX.md`：
+
+  * `references/09-Check&Test&Debug/Check/01-static-code-checks.md`（语法/导入/Ruff/运行验证/UI 反模式检查）
+
+  * `references/09-Check&Test&Debug/Check/02-ui-audit.md`（`ui_audit.py` 13 条禁令 / 产品 UI 检查 / AI Slop / a11y）
+
+  * `references/09-Check&Test&Debug/Check/03-route-hygiene.md`（路由显式化 `check_routes.py` / 前端→后端链路 `check_routes_linkage.py`）
+
+* **Test 层（动态验证，运行真实代码路径）**，入口 `references/09-Check&Test&Debug/Test/INDEX.md`：
+
+  * `references/09-Check&Test&Debug/Test/01-test-driven-development.md`（TDD 核心）
+
+  * `references/09-Check&Test&Debug/Test/02-e2e.md`（业务路径 E2E + 视觉 E2E）
+
+  * `references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md`（冒烟门禁 / 打包前清单 / release\_gate）
+
+  * `references/09-Check&Test&Debug/Test/04-ui-tools.md`（`ui_audit` / `ui_headless_verify` / `ui_window_verify` / `ui_automate` 分工）
+
+* **Debug 层（失败处理闭环，任何 Check/Test 失败后进入）**，入口 `references/09-Check&Test&Debug/Debug/INDEX.md`：`references/09-Check&Test&Debug/Debug/01-debug-discipline.md`（调试总纲 / Prove-It / Flaky / 干净复测）。
+
+* **阶段一（持续验证）**：`py_compile` + `from app import app` + `uv run pytest` 全绿（见 Check/01）。
+
+* **阶段二（全面验证）**：`启动.bat` 自测 + `ui_audit.py`（禁止跳过，见 Check/02）+ `ui_window_verify.py` + `ui_automate.py`（见 Test/04）。
+
+* **阶段三（预发布门禁）**：`check_routes_linkage.py`（见 Check/03）+ `release_gate.py` + 冒烟测试（见 Test/03）。
+
+* **产出物**：pytest 报告 + 审计报告 + 质检报告 + 路由链路报告。
+
+* **验收标准**：三个阶段全通过（持续验证 pytest 全绿 → 全面验证机器视觉质检通过 + 主流程走通 → 预发布门禁路由链路校验 + 冒烟通过）。
+
+#### ⑧ 打包
+
+* **任务**：最小 venv → PyInstaller `--onefile` → 冒烟测试 → 清理。
+
+* **必读**：`references/08-packaging.md`（PyInstaller 深度指南）；`references/packaging/INDEX.md`（打包子专题导航，按流程顺序）：
+
+  * `references/packaging/01-core-workflow.md`（前置检查 → 打包 → 验证）
+
+  * `references/packaging/02-build-commands.md`（--onefile / --console / --noupx 等命令与参数）
+
+  * `references/packaging/03-path-and-meta.md`（路径适配与元数据处理）
+
+  * `references/packaging/04-advanced-config.md`（版本信息 / 图标 / 构建元数据 / 排除策略）
+
+  * `references/packaging/05-smoke-test.md`（打包产物冒烟验证）
+
+  * `references/packaging/06-troubleshooting.md`（打包故障排除）
+
+  * `references/packaging/07-build-hardening.md`（构建加固：高级陷阱与实战经验）
+
+* **必读（跨平台）**：`references/11-cross-platform.md`（后端矩阵 / 各 OS 打包矩阵 / cefpython3 / DRY-RUN 铁律）。
+
+* **执行**：`scripts/build_windows_exe.py`（Windows）；`scripts/build_cross_platform.py`（非当前 OS 仅 `--dry-run` 命令预演，严禁伪造结果）。
+
+* **产出物**：`dist/*.exe`（Windows；macOS/Linux 产物见 `references/11-cross-platform.md`）。
+
+* **验收标准**：打包前 pytest 全绿门禁通过 + 冒烟测试通过（HTTP 200 + 窗口正常）+ 跨平台目标遵守 DRY-RUN。
+
+#### ⑨ 交付
+
+* **任务**：填写交付清单 → 说明产物位置、用法、退出方式 → 交付确认。
+
+* **必读**：`docs/delivery-checklist.md`（交付清单）；`references/launch-standard-deliverable.md`（启动器完整规则）；`docs/glossary.md`（术语）。
+
+* **要点**：交付清单须含测试证据（pytest 全绿 + 机器视觉质检通过 `ui_window_verify.py`），供用户验收。
+
+* **产出物**：已填写的交付清单 + 双用途 README（用户说明书 + LLM 克隆说明书）。
+
+* **验收标准**：用户双击 `启动.bat` 即可独立使用，无需额外配置；README 可对照克隆出同等应用。
 
 ***
 
@@ -310,7 +388,7 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 
 * 注：纯主观审美不在机器范围，按需人工判断，但**不将人工截图作为验收手段**。
 
-* **测试驱动门禁（逻辑层，必须）**：新业务模块必须 test-first（Red-Green-Refactor），**禁止「先实现后补测」**；bug 修复必须 Prove-It（先写复现测试）；**每次改动后跑全量** **`uv run pytest`** **+ HTML 审计，非零即阻断**。pytest 管「逻辑对不对」，绝不写脆弱的 DOM/渲染单测（那是 `ui_window_verify.py` 的职责）。详见 `references/09-test-driven-development.md`。
+* **测试驱动门禁（逻辑层，必须）**：新业务模块必须 test-first（Red-Green-Refactor），**禁止「先实现后补测」**；bug 修复必须 Prove-It（先写复现测试）；**每次改动后跑全量** **`uv run pytest`** **+ HTML 审计，非零即阻断**。pytest 管「逻辑对不对」，绝不写脆弱的 DOM/渲染单测（那是 `ui_window_verify.py` 的职责）。详见 `references/09-Check&Test&Debug/Test/01-test-driven-development.md`。
 
 * **控制台输出禁止 emoji**：打包后 EXE 运行在 Windows 控制台（GBK 编码），emoji 会导致乱码。用 `[OK]` / `[FAIL]` 替代 ✅ / ❌，用 `[INFO]` / `[WARN]` / `[ERROR]` 替代图标。
 
@@ -416,19 +494,63 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 数据层（SQLite / Repository / 存储）
 ```
 
-- **模块化**：按业务功能拆分模块（如 `auth`、`billing`、`report`），每个模块高内聚（只做自己的事）、低耦合（模块间只经显式接口通信，禁止互相 import 内部实现）。
-- **关注点分离**：UI（渲染/交互）、业务逻辑、数据访问、配置读取、日志各自独立成层，禁止把 SQL 写在视图里、把业务规则写在路由里。
-- **高内聚低耦合**：一个模块/类只承担单一职责；依赖通过接口或函数注入，不产生循环依赖；公共逻辑抽到 `common/` 或 `utils/` 复用，消除 copy-paste。
-- 详细分层与模块划分见 `references/05-project-structure.md`、`references/architecture/INDEX.md` 与 `references/02-module-design.md`。
+* **模块化**：按业务功能拆分模块（如 `auth`、`billing`、`report`），每个模块高内聚（只做自己的事）、低耦合（模块间只经显式接口通信，禁止互相 import 内部实现）。
 
-* 新项目使用 `src` 结构
+* **关注点分离**：UI（渲染/交互）、业务逻辑、数据访问、配置读取、日志各自独立成层，禁止把 SQL 写在视图里、把业务规则写在路由里。
 
-* 在 `pyproject.toml` 的 `[project.scripts]` 中定义启动别名，`uv run <别名>` 运行
+* **高内聚低耦合**：一个模块/类只承担单一职责；依赖通过接口或函数注入，不产生循环依赖；公共逻辑抽到 `common/` 或 `utils/` 复用，消除 copy-paste。
 
-* 业务逻辑、页面组件、配置读取、文件读写分层
+* 详细分层与模块划分见 `references/05-project-structure.md`、`references/architecture/INDEX.md` 与 `references/02-module-design.md`。
 
-* 默认补齐类型注解、日志、错误提示、`.env.example`、`.gitignore`
+- 新项目使用 `src` 结构
 
-* 日志默认按日期分文件、单文件 5MB、保留最近 30 天
+- 在 `pyproject.toml` 的 `[project.scripts]` 中定义启动别名，`uv run <别名>` 运行
 
-* 单文件过大时主动拆分
+- 业务逻辑、页面组件、配置读取、文件读写分层
+
+- 默认补齐类型注解、日志、错误提示、`.env.example`、`.gitignore`
+
+- 日志默认按日期分文件、单文件 5MB、保留最近 30 天
+
+- 单文件过大时主动拆分
+
+### TDD 铁律（测试驱动开发，必须）
+
+**TDD（Test-Driven Development，测试驱动开发）** 是强制性的软件开发方法论：**先写测试，再写代码**。测试不是「事后验证」，而是「事前设计」，是驱动开发的核心力量。
+
+#### 红-绿-重构循环（TDD 基本流程）
+
+```
+🔴 红（Red）—— 写一个失败的测试
+  先为要实现的功能写单元测试；此时功能代码还不存在，测试必然失败。
+   ↓
+🟢 绿（Green）—— 写最少量的代码让测试通过
+  只写刚好够用的实现，不追求完美、不写多余功能。
+   ↓
+🔵 重构（Refactor）—— 优化代码结构
+  测试全部通过的前提下重构：消除重复、改善命名、优化结构；重构后测试仍须全绿。
+   ↓（重复循环，小步迭代出完整功能）
+```
+
+#### 核心原则
+
+- **测试先行**：写任何功能代码之前，先写测试。
+- **小步快跑**：每次只写一个小测试、只写刚好够用的实现。
+- **测试即文档**：测试用例本身就是对功能需求的最好描述。
+- **回归保障**：每次改动后跑一遍测试，确保没破坏已有功能。
+
+#### 好处
+
+- 代码质量高——每个功能都有对应测试覆盖；
+- 设计更优——为可测试性，代码自然更模块化、低耦合；
+- 减少调试时间——问题最早阶段被发现；
+- 重构有信心——有测试兜底，敢大胆改代码；
+- 需求更清晰——写测试的过程就是在理清需求。
+
+#### 落地铁律（与本技能工作流衔接）
+
+- 新业务模块必须 test-first（Red-Green-Refactor），**禁止「先实现后补测」**；详见 `references/09-Check&Test&Debug/Test/01-test-driven-development.md`。
+- 修 bug 走 **Prove-It**（先写复现测试 → 实现修复 → 测试通过 → 跑全量防回归）；详见 `references/09-Check&Test&Debug/Debug/01-debug-discipline.md`。
+- pytest 管「逻辑对不对」，绝不写脆弱的 DOM/渲染单测（那是 `ui_window_verify.py` 的职责）。
+- 每次改动后跑全量 `uv run pytest` + HTML 审计，**非零即阻断**（见「质量」铁律）。
+- 测试范围与金字塔、TestClient、数据驱动、Mock、回归纪律详见 `references/09-Check&Test&Debug/Test/01-test-driven-development.md`。

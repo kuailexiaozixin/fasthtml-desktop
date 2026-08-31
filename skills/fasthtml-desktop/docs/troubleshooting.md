@@ -135,7 +135,7 @@ PyInstaller 的二进制依赖分析器不会自动追踪这些 `ctypes.CDLL()` 
 def project_detail(pid: int): ...
 ```
 
-导航/模板中的 href 必须与显式路径完全一致。APIRouter 默认路由陷阱与正确写法见 `references/quality-check/02-ui-audit.md` §4.5。
+导航/模板中的 href 必须与显式路径完全一致。APIRouter 默认路由陷阱与正确写法见 `references/09-Check&Test&Debug/Check/02-ui-audit.md` §4.5。
 
 ### 打包后 EXE 窗口白屏，但 HTTP 在浏览器中可访问
 
@@ -324,7 +324,7 @@ def test_expense_fixture_align(fresh_db):
 
 **落地位置**：
 - 在 `conftest.py` 或各 `test_*.py` 的顶部，用一条参数化测试覆盖所有表的 fixture 对齐，作为**第一道门禁**先于业务逻辑测试运行。
-- 与 `09-test-driven-development.md` 的"测试驱动门禁"互为补充：TDD 管逻辑，本规则管**数据契约**。
+- 与 `09-Check&Test&Debug/Test/01-test-driven-development.md` 的"测试驱动门禁"互为补充：TDD 管逻辑，本规则管**数据契约**。
 
 **关联门禁**（与 `release_gate.py` 叠加）：
 - `release_gate.py` → 流程级门禁（pytest 全绿才走到打包）

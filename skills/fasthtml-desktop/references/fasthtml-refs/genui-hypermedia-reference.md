@@ -567,7 +567,7 @@ Plash 是 Answer.ai 的 FastHTML 托管服务（测试阶段），会把整个�
 | 让组件在桌面窗口里跑起来 | `references/06-pywebview-shell.md` |
 | 处理端点的类型标注与表单解析 | `references/10-ft-handlers-typing.md` |
 | 打包成单文件 EXE | `references/08-packaging.md` + `references/packaging/01-core-workflow.md` |
-| 界面质检（pywebview 原生视觉） | `references/quality-check/INDEX.md` |
+| 界面质检（pywebview 原生视觉） | `references/09-Check&Test&Debug/INDEX.md` |
 
 ## 架构总结
 

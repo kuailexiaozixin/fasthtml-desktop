@@ -138,7 +138,7 @@ Div(H1("标题"),                       Div(H1("标题"),
 | **数据管理型**（仪表盘、CRUD 后台、表单工具、表格密集） | 骨架预览 + `ui_audit.py` 审计即可         | 布局以列表/表单/表格为主，PicoCSS 默认样式已足够；**不必做像素级原型**，确认结构后用 ui\_audit 守住反模式门禁即可 |
 | **工具型 / API 查询型**（单页表单 + 结果展示）   | 轻量原型（表单 + 结果区占位）                  | 参考 `examples/01-announcement-downloader`                              |
 
-> 无论哪种分级，**禁止跳过** **`ui_audit.py`** **反模式审计**（纯 headless，零 GUI 依赖）。视觉密集型额外建议结合 pywebview 原生窗口质检做机器视觉复检（见 quality-check/04-smoke-and-delivery.md 的 pywebview 原生视觉质检 `ui_window_verify.py`）。
+> 无论哪种分级，**禁止跳过** **`ui_audit.py`** **反模式审计**（纯 headless，零 GUI 依赖）。视觉密集型额外建议结合 pywebview 原生窗口质检做机器视觉复检（见 09-Check&Test&Debug/Test/03-smoke-and-delivery.md 的 pywebview 原生视觉质检 `ui_window_verify.py`）。
 
 ***
 
@@ -217,7 +217,7 @@ app, rt = fast_app()  # fast_app 默认加载 PicoCSS，且会注入 htmx/fastht
 
 > **⚠️ 高频真实 bug**：菜单/按钮的图标字段常存成字符串名（如 `"dashboard"`、`"folder"`、`"alert"`），
 > 若直接 `Span(icon_name, cls="nav-icon")` 渲染，浏览器会把图标名当**纯文本**显示，再被 `.nav-icon { width: 20px }` 截断，
-> 与相邻标签重叠成 `dash仪表盘d`、`fold研发项目`。**这在 HTML 层完全合法（无报错、状态 200），需 pywebview 原生视觉质检（渲染后 DOM 检查，见 quality-check/04-smoke-and-delivery 测试项五）才能发现**，
+> 与相邻标签重叠成 `dash仪表盘d`、`fold研发项目`。**这在 HTML 层完全合法（无报错、状态 200），需 pywebview 原生视觉质检（渲染后 DOM 检查，见 09-Check&Test&Debug/Test/03-smoke-and-delivery.md 测试项五）才能发现**，
 > 是纯 HTML 无头审计（ui\_audit.py / ui\_headless\_verify.py）的盲区。
 
 图标三种正确做法：
@@ -253,7 +253,7 @@ Span(NotStr(ICON_SVGS.get(icon, "")), cls="nav-icon")
 ```
 
 > **验收**：渲染 HTML 里应出现 `<svg`，且**不应出现**任何图标名裸文本（`dashboard`/`folder`/`alert` 等）。
-> 纯 HTML 断言可查这两条，但视觉对齐需经 pywebview 原生视觉质检确认（见 quality-check/04-smoke-and-delivery 测试项五）。
+> 纯 HTML 断言可查这两条，但视觉对齐需经 pywebview 原生视觉质检确认（见 09-Check&Test&Debug/Test/03-smoke-and-delivery.md 测试项五）。
 
 ### Step 3：定义交互位置（为编码做准备）
 

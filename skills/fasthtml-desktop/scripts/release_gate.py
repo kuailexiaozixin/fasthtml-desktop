@@ -5,7 +5,7 @@
 把分散的质量门禁串成一条流水线：**全绿才放行**。
 任一 required 步骤非零退出 → 整体非零退出（CI 可直接用）。
 
-门禁顺序即契约（来自 quality-check 发布前自检）：
+门禁顺序即契约（来自 09-Check&Test&Debug/Test/03-smoke-and-delivery.md 发布前自检）：
   1. pytest                逻辑门禁（单元/集成全绿）
   2. check_routes         服务端路由显式化（APIRouter 默认路由陷阱）
   3. check_routes_linkage  前端→后端链路校验（404 死链契约断裂）

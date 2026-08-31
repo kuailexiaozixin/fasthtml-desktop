@@ -290,7 +290,7 @@ stage('Smoke Test') {
 
 ## 对实际 EXE 运行 pywebview 原生窗口视觉质检
 
-冒烟测试只验证「EXE 起得来、HTTP 200、窗口在」；界面视觉正确性仍需 pywebview 原生窗口视觉门禁（见 `quality-check/04-smoke-and-delivery.md` 测试项五）。要让 `ui_window_verify.py` 指向**实际 EXE**（而非 dev server），只需让脚本知道 EXE **实际**提供服务的端口——**不必固定端口**，按场景二选一：
+冒烟测试只验证「EXE 起得来、HTTP 200、窗口在」；界面视觉正确性仍需 pywebview 原生窗口视觉门禁（见 `09-Check&Test&Debug/Test/03-smoke-and-delivery.md` 测试项五）。要让 `ui_window_verify.py` 指向**实际 EXE**（而非 dev server），只需让脚本知道 EXE **实际**提供服务的端口——**不必固定端口**，按场景二选一：
 
 **做法 A（固定端口，适合 CI / 反复复跑）**
 - 入口 `main.py` 默认用 `find_free_port()` 在 `5001–6000` 间**自动挑空闲端口**，只有当 `PORT` 环境变量非 0 时才固定（见模板 `src/main.py`：`PORT = int(os.environ.get("PORT", 0)) or find_free_port()`）。因此固定端口是**可选项**，不是必需。
