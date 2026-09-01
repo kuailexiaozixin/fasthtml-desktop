@@ -6,7 +6,7 @@ description: >
   最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
   当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
   "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.8.0"
+version: "1.9.0"
 author: agent
 agent_created: true
 platform: multi
@@ -52,296 +52,157 @@ FastHTML 是**服务端渲染**框架：HTML 由 uvicorn 按请求实时生成�
 
 ***
 
-## 完整工作流（= 后续 AI 的最低执行清单）
+## 完整工作流与分步执行详解（= 后续 AI 的唯一执行清单）
 
-> 本流程即后续 AI 的唯一执行清单，按 ①→⑨ 顺序执行，**不可跳过、不可乱序**。各步骤的铁律与门禁细节见下方「必须遵守的铁律」各小节及对应 references。
+> 本流程即后续 AI 的唯一执行清单，按 ①→⑨ 顺序执行，**不可跳过、不可乱序**。以下已将「完整工作流」与「分步执行详解」合并为单一连续章节：**每个步骤内联必读参考、复用要点、产出物与验收标准**，须读完并执行完本步骤全部内容后再进入下一步，**不得跳过任一字段**。各步骤涉及的铁律与门禁细节见下方「必须遵守的铁律」各小节及对应 references。
 
-```
-用户说"帮我做个桌面工具"
-  │
-  ├─ 分支：新建项目 / 已有项目？
-  │     │
-  │     ├─ 新建项目 → 走以下完整流程
-  │     │
-  │     └─ 已有项目 → 跳过 ①-④，执行结构合规检查：
-  │         1. 检查 src/ 下存在 app.py 或 <pkg>/app.py
-  │         2. 检查 src/main.py 是否存在且入口正确
-  │         3. 检查 启动.bat / launcher.json / requirements.txt（或 pyproject.toml）是否存在（依赖装进项目 venv，由 launcher.json 的 use_venv 管理，不污染用户全局环境）
-  │         4. 检查 pyproject.toml 依赖是否完整
-  │         5. 检查界面渲染与交互（图标/重叠/对比度/空白页等）
-  │         合规检查通过后 → 进入 ⑤ 界面设计（如有新 UI）或直接 ⑥ 编码
-  │
-  ├─ ① 需求澄清（01-need-discovery.md）
-  │    问清楚：做什么？输入输出？给谁用？
-  │    ▶ 同时捕获**可测试验收标准**（输入/输出/边界/异常路径），作为 ⑥ 测试与 ⑨ 验收的依据
-  │    ▶ **先看 examples 有没有同类业务场景**：扫一遍 `./examples/README.md`，若已有相似应用（如 CRM/ERP/表格/文件管理），直接复用其业务建模与入口范式，非必要不自造轮子
-  │    ▶ 产出：需求优先级表（MoSCoW 分级）
-  │
-  ├─ ② 架构设计（先读 references/architecture/INDEX.md）
-  │    定 MVP 边界、选架构模式、画业务流图
-  │    ▶ **先看 examples 同类应用的架构**：扁平布局 / 分层（`app.py`+`db.py`+`routes_*.py`）/ 插件化 / 入口壳（`templates/shared/main.py`）等，直接套用成熟范式，不重新发明
-  │    ▶ 产出：docs/architecture.md（MVP 边界表 + 模块分解 + 业务流图 + 接口设计）
-  │
-  ├─ ②-α 功能模块设计（02-module-design.md）
-  │    功能-模块分配矩阵 → 模块接口契约 → 模块依赖图 → 数据流图
-  │    ▶ 模块接口契约即**测试契约**：每个契约点对应一个 ⑥ 的测试用例
-  │    ▶ 产出：docs/modules.md（功能-模块矩阵 + 接口契约 + 依赖图）
-  │
-  ├─ ③ 环境准备（铁律：先跑 ensure_uv_env.sh）
-  │    安装 uv、配置镜像、安装 Python
-  │    ▶ 产出：uv + Python 环境已就绪
-  │
-  ├─ ④ 项目初始化（铁律：跑 bootstrap_project.sh）
-  │    生成 web-desktop-exe 骨架 → 用 `uv add` 补充业务依赖 → uv sync
-  │    ▶ **产出含标准交付物（每个 f-d 项目必备）**：骨架 + .gitignore + .env.example + **`启动.bat`（一键双击启动器）** + **`launcher.py`（一键启动决策层，双击后端的唯一逻辑源）+ `launcher.json`（启动配置）** + **双用途 `README.md`（用户说明书 + LLM 克隆说明书）** + `requirements.txt`（启动.bat 装依赖用）
-  │    ▶ `启动.bat`：通过 `launcher.json` 的 `use_venv=true` 在**项目目录内建最小 `.venv`** 并 re-exec 进去（隔离优先、不污染用户全局环境，与 examples「复用全局」相反）→ 首次运行预检依赖，缺失则 `pip install` 到**该 venv** → 启动 main.py 弹桌面窗口；普通用户双击即用，无需终端。**`.py` 双击默认用编辑器打开不会运行**，故用户入口统一是 `启动.bat`，`start.py` 仅作开发者 CLI。
-  │    ⚠ 骨架用 bootstrap 脚本，逐文件 Write，禁单条巨命令；命令超时见下方「命令执行与超时」铁律
-  │
-  ├─ ⑤ 界面设计（先读 03-ui-design.md）
-  │    用 FastHTML 写出纯界面原型，预览后迭代
-  │    设计质量评审详见「编码与结构规范 > Layer 3」
-  │    ▶ UI 行为变更须同步更新/新增对应测试；界面交付以 **机器视觉质检（UI 自动化测试）** 为唯一机器手段：`scripts/ui_window_verify.py`（pywebview 原生窗口 + 可选 html2canvas 无头截图，详见 09-Check&Test&Debug/Test/01-test-driven-development.md §1）
-  │    ▶ 产出：prototype_app.py（可运行纯界面原型）
-  │
-  ├─ ⑥ 编码（先读 fasthtml-refs/fasthtml-llms-ctx.txt【前置必读】 + 10-ft-handlers-typing.md【参数绑定规则】 + 07-integration-patterns.md）
-  │    在 src/app.py 中写业务逻辑
-  │    最小可运行版本先行：先跑通空壳确认技术栈兼容，再加业务
-  │    src/main.py 不动（pywebview + uvicorn 入口）
-  │    ▶ **写业务代码前先查 examples 有没有现成实现**：认证/登录（`web/account_auth.py`）、FastHTML+HTMX 局部刷新、FastAPI 子应用挂载、标准库导出、PyInstaller hidden-import 套路等，能 copy-adapt 就不重写
-  │    ▶ **⑥-β 测试驱动（详见 09-Check&Test&Debug/Test/01-test-driven-development.md）**：每新增业务模块先写失败测试（Red-Green-Refactor）；
-  │      修 bug 走 Prove-It（先写复现测试）；禁止「先实现后补测」。
-  │    ▶ 产出：src/app.py + 各模块文件 + tests/ 对应测试
-  │
-  ├─ ⑦ 质量门禁（打包前必过，分三个阶段按序执行）
-  │
-  │    [阶段一：持续验证]（每次改代码后立即执行）
-  │    ▶ `py_compile` 语法检查 + `python -c "from app import app"` 导入测试
-  │    ▶ `uv run pytest` 单元/集成测试全绿（逻辑门禁，非零即阻断）
-  │    ▶ 语法 / 导入 / 静态检查细则见 references/09-Check&Test&Debug/Check/01-static-code-checks.md
-  │
-  │    [阶段二：全面验证]（功能开发完成后执行）
-  │    ▶ **用 `启动.bat` 启动应用**，自测正常+异常路径
-  │    ▶ UI 反模式检查（`scripts/ui_audit.py`，纯 headless，禁止跳过；自动抓取 `<link rel=stylesheet>` 外部 CSS 纳入审计，CSS 外部化项目不再误报；可用 `--ignore-ban "禁令名/序号/子串"` 豁免已知误报；反模式规则详见 references/09-Check&Test&Debug/Check/02-ui-audit.md）
-  │    ▶ 机器视觉质检（`scripts/ui_window_verify.py`：DOM 断言+可选截图；HTML 结构验证通过≠界面没问题；无 GUI 强制 HTML 结构验证）
-  │    ▶ UI 交互自动化（`scripts/ui_automate.py`：点击/输入/导航/断言，验证交互行为正确性）
-  │    ▶ 质检脚本详细用法见 `references/09-Check&Test&Debug/Test/04-ui-tools.md`
-  │    ▶ 测试夹具 schema 对齐：新增测试须用 `scripts/fixture_schema_helper.py` 校验 insert 键全部存在于真实 db 列（见 `docs/troubleshooting.md` 第五章）
-  │
-  │    [阶段三：预发布门禁]（打包前执行一次）
-  │    ▶ 前端→后端路由链路校验（`scripts/check_routes_linkage.py`：捕获前端引用但后端未注册的路由，防运行时 404。exit 1 = 阻断发布；规则详见 references/09-Check&Test&Debug/Check/03-route-hygiene.md）
-  │    ▶ 统一发布门禁（`scripts/release_gate.py`：串联 pytest → check_routes → check_routes_linkage → UI 视觉质检 → verify_imports → check_refs，全绿才放行）
-  │    ▶ 冒烟测试（HTTP 200 + 窗口句柄存在 + 后台业务健康端点可达；详见 references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md）
-  │
-  │    ⚠ **核心节流点**：禁止「绕过 启动.bat、未充分验证就直接打包」。打包只是交付的最后一步，不是验证手段。
-  │    ⚠ **打包后又改代码**：不立即重新打包，先用 `启动.bat` 跑源码验证改动，并主动提示用户当前 EXE 为旧快照；用户确认前不重打包。
-  │    ▶ 放行判据：pytest 全绿 + 机器视觉质检通过 + 路由链路校验通过 + 主流程走通 + 启动无报错
-  │    ▶ 产出：pytest 报告 + 审计报告 + 质检报告 + 路由链路报告
-  │
-  ├─ ⑧ 打包（08-packaging.md + 11-cross-platform.md + 构建脚本）
-  │    门禁已在 ⑦ 预发布阶段通过，本步骤专注构建：
-  │    最小 venv → PyInstaller `--onefile`（Windows；macOS/Linux 见 `references/11-cross-platform.md`）→ 冒烟测试 → 清理
-  │    ▶ 产出：`dist/*.exe`（Windows）
-  │    ▶ **跨平台 DRY-RUN 铁律**：PyInstaller 不支持交叉编译；非当前 OS 目标只生成**命令预演**（`--dry-run`），严禁伪造运行结果（见 11-cross-platform.md）
-  │    ⚠ 构建必带大 timeout=600 或后台运行（PyInstaller --onefile 常 >120s）
-  │
-  └─ ⑨ 交付（先读 docs/delivery-checklist.md）
-      填写交付清单 → 说明产物位置、用法、退出方式 → 交付确认
-      ▶ 交付清单须含**测试证据**（pytest 全绿 + 机器视觉质检通过：`ui_window_verify.py`），供用户验收参考
-      ▶ 产出：已填写的交付清单 + 双用途 README（用户说明书 + LLM 克隆说明书）
-```
+### 分支：新建项目 / 已有项目
 
-### 分步执行详解（唯一执行顺序；每步内联必读参考 / 产出物 / 验收标准）
+用户说"帮我做个桌面工具"时，先判断是新建项目还是已有项目：
 
-#### ① 需求澄清
+* **新建项目** → 按下方 ①→⑨ 完整流程执行。
+* **已有项目** → 跳过 ①-④，执行结构合规检查：
+  1. 检查 src/ 下存在 app.py 或 <pkg>/app.py
+  2. 检查 src/main.py 是否存在且入口正确
+  3. 检查 启动.bat / launcher.json / requirements.txt（或 pyproject.toml）是否存在（依赖装进项目 venv，由 launcher.json 的 use_venv 管理，不污染用户全局环境）
+  4. 检查 pyproject.toml 依赖是否完整
+  5. 检查界面渲染与交互（图标/重叠/对比度/空白页等）
+  合规检查通过后 → 进入 ⑤ 界面设计（如有新 UI）或直接 ⑥ 编码。
+
+### ① 需求澄清
 
 * **任务**：问清楚做什么、输入输出、给谁用；产出需求优先级表。
-
 * **必读**：`references/01-need-discovery.md`（首轮话术、必问问题、可测试验收标准捕获）。
-
 * **复用**：扫 `examples/README.md`，若已有同类业务场景（CRM/ERP/表格/文件管理等）直接复用其业务建模与入口范式，非必要不自造轮子。
-
+* **要点**：同时捕获**可测试验收标准**（输入/输出/边界/异常路径），作为 ⑥ 测试与 ⑨ 验收的依据。
 * **产出物**：需求优先级表（MoSCoW 分级）。
-
 * **验收标准**：Must/Should/Could/Won't 已分级，MVP 清单已确认。
 
-#### ② 架构设计
+### ② 架构设计
 
 * **任务**：定 MVP 边界、选架构模式、画业务流图。
-
 * **必读**：`references/architecture/INDEX.md`（18 章导航总入口）。按项目复杂度选读章节：
-
   * 简单项目：`references/architecture/01-system-context.md`（系统上下文与边界）、`references/architecture/10-checklist.md`（设计检查清单）、`references/architecture/17-mvp-boundary.md`（MVP 边界表）
-
   * 中等复杂度：另加 `references/architecture/03-module-decomposition.md`（模块分解）、`references/architecture/05-interface-design.md`（接口设计）、`references/architecture/07-scenario-driven.md`（场景驱动的架构类型选择）
-
   * 复杂企业应用：01-18 全部章节（02 核心业务流 `references/architecture/02-business-flow.md` / 04 数据架构 `references/architecture/04-data-architecture.md` / 06 统一架构框架 `references/architecture/06-unified-framework.md` / 08 ADR `references/architecture/08-adr.md` / 09 常见架构错误 `references/architecture/09-common-mistakes.md` / 11 架构模式选型 `references/architecture/11-pattern-selection.md` / 12 状态机 `references/architecture/12-state-machine.md` / 13 存储选择 `references/architecture/13-storage-selection.md` / 14 技术债 `references/architecture/14-tech-debt.md` / 15 错误处理 `references/architecture/15-error-handling.md` / 16 非功能设计 `references/architecture/16-non-functional.md` / 18 图生成指南 `references/architecture/18-diagram-guide.md`）
-
-* **复用**：先看 `examples/` 同类应用的架构（扁平 / 分层 / 插件化 / 入口壳 `templates/shared/main.py`），直接套用成熟范式。
-
+* **复用**：先看 `examples/` 同类应用的架构（扁平布局 / 分层（`app.py`+`db.py`+`routes_*.py`）/ 插件化 / 入口壳（`templates/shared/main.py`）等），直接套用成熟范式，不重新发明。
 * **产出物**：`docs/architecture.md`（MVP 边界表 + 模块分解 + 业务流图 + 接口设计）。
-
 * **验收标准**：含 MVP 边界表 + 模块分解 + 业务流图 + 接口设计。
 
-#### ②-α 功能模块设计
+### ②-α 功能模块设计
 
 * **任务**：功能-模块分配矩阵 → 模块接口契约 → 模块依赖图 → 数据流图。
-
 * **必读**：`references/02-module-design.md`。
-
-* **要点**：模块接口契约即测试契约，每个契约点对应一个 ⑥ 的测试用例。
-
+* **要点**：模块接口契约即**测试契约**，每个契约点对应一个 ⑥ 的测试用例。
 * **产出物**：`docs/modules.md`（功能-模块矩阵 + 接口契约 + 依赖图 + 数据流图）。
-
 * **验收标准**：含功能-模块分配矩阵 + 模块接口契约 + 模块依赖图 + 数据流图。
 
-#### ③ 环境准备
+### ③ 环境准备
 
 * **任务**：安装 uv、配置镜像、安装 Python。
-
 * **必读**：`references/04-agent-execution-and-env.md`（依赖管理 / 编码铁律 / 命令超时）。
-
 * **执行**：先跑 `scripts/ensure_uv_env.sh`（或 `.ps1`），任何新建项目第一步，禁止跳过。
-
 * **产出物**：uv + Python + 镜像已配置。
-
 * **验收标准**：`uv --version` 正常输出。
 
-#### ④ 项目初始化
+### ④ 项目初始化
 
 * **任务**：生成 web-desktop-exe 骨架 → `uv add` 补业务依赖 → `uv sync`。
-
 * **执行**：跑 `scripts/bootstrap_project.sh`（或 `.ps1`）生成骨架，禁止从零手写 pyproject.toml。
-
-* **标准交付物**：骨架 + `.gitignore` + `.env.example` + `启动.bat` + `launcher.py` + `launcher.json` + 双用途 `README.md` + `requirements.txt`。
-
+* **标准交付物（每个 f-d 项目必备）**：骨架 + `.gitignore` + `.env.example` + **`启动.bat`（一键双击启动器）** + **`launcher.py`（一键启动决策层，双击后端的唯一逻辑源）+ `launcher.json`（启动配置）** + **双用途 `README.md`（用户说明书 + LLM 克隆说明书）** + `requirements.txt`（启动.bat 装依赖用）。
+* **启动器细节**：`启动.bat` 通过 `launcher.json` 的 `use_venv=true` 在**项目目录内建最小 `.venv`** 并 re-exec 进去（隔离优先、不污染用户全局环境，与 examples「复用全局」相反）→ 首次运行预检依赖，缺失则 `pip install` 到**该 venv** → 启动 main.py 弹桌面窗口；普通用户双击即用，无需终端。**`.py` 双击默认用编辑器打开不会运行**，故用户入口统一是 `启动.bat`，`start.py` 仅作开发者 CLI。
+* **警告**：骨架用 bootstrap 脚本，逐文件 Write，禁单条巨命令；命令超时见下方「命令执行与超时」铁律。
 * **产出物**：可双击 `启动.bat` 的完整骨架。
-
 * **验收标准**：双击 `启动.bat` 自动建项目 venv 并装依赖启动（依赖装进项目内 venv，`use_venv=true`，不污染全局 Python）；`uv sync` 成功。
 
-#### ⑤ 界面设计
+### ⑤ 界面设计
 
 * **任务**：用 FastHTML 写出纯界面原型，预览后迭代。
-
 * **必读**：`references/03-ui-design.md`（原型驱动三步法、布局模板、CSS 框架选型、交互位置标注）；`references/fasthtml-refs/picocss-reference.md`（PicoCSS 参考）。
-
-* **要点**：UI 行为变更须同步更新/新增测试；界面交付以机器视觉质检（`scripts/ui_window_verify.py`）为唯一机器手段。
-
+* **要点**：UI 行为变更须同步更新/新增测试；界面交付以机器视觉质检（UI 自动化测试）为唯一机器手段：`scripts/ui_window_verify.py`（pywebview 原生窗口 + 可选 html2canvas 无头截图，详见 `references/09-Check&Test&Debug/Test/01-test-driven-development.md` §1）；设计质量评审详见「编码与结构规范 > Layer 3」。
 * **产出物**：`prototype_app.py`（可运行纯界面原型）。
-
 * **验收标准**：可运行预览，含模拟数据，确认布局后进入编码。
 
-#### ⑥ 编码
+### ⑥ 编码
 
-* **任务**：在 `src/app.py` 写业务逻辑；最小可运行版本先行；`src/main.py` 不动。
-
+* **任务**：在 `src/app.py` 写业务逻辑；最小可运行版本先行（先跑通空壳确认技术栈兼容，再加业务）；`src/main.py` 不动（pywebview + uvicorn 入口）。
 * **必读（前置）**：`references/fasthtml-refs/fasthtml-llms-ctx.txt`（FastHTML 官方 LLMs 上下文，写任何代码前必读）；`references/10-ft-handlers-typing.md`（参数绑定规则）；`references/07-integration-patterns.md`（fasthtml+pywebview+PyInstaller 协同）。
-
 * **必读（按需）**：
-
   * `references/fasthtml-refs/fastlite-llms.txt`（数据库操作时）
-
   * `references/06-pywebview-shell.md`（pywebview 桌面壳：后端矩阵 / 窗口控制 / JS 桥接 / 对话框 / 菜单 / DOM / 拖拽 / 系统托盘）
-
   * `references/fasthtml-refs/genui-hypermedia-reference.md`（GenUI 超媒体）
-
   * `references/12-fasthtml-fastapi.md`（FastAPI 集成）
-
   * `references/pywebview-examples/`（59 个已验证示例脚本，按能力域查阅）：
-
     * 窗口基础/生命周期：`simple_browser.py`, `multiple_windows.py`, `destroy_window.py`, `hide_window.py`, `confirm_close.py`, `window_title_change.py`, `change_url.py`, `get_current_url.py`, `http_server.py`, `localhost_ssl.py`
-
     * 窗口外观/行为：`frameless.py`, `transparent.py`, `fullscreen.py`, `toggle_fullscreen.py`, `on_top.py`, `min_size.py`, `resize.py`, `move_window.py`, `icon.py`, `vibrancy.py`, `window_state.py`, `state.py`, `focus.py`, `screens.py`, `loading_animation.py`, `localization.py`
-
     * JS 桥接 / DOM：`js_api.py`, `expose.py`, `evaluate_js.py`, `evaluate_js_async.py`, `run_js.py`, `get_elements.py`, `dom_events.py`, `dom_manipulation.py`, `dom_traversal.py`, `dom_state_dragregion_verified.py`, `load_html.py`, `load_css.py`, `headers.py`, `user_agent.py`, `settings.py`, `debug.py`, `remote_debugging.py`, `multiprocess.py`
-
     * 对话框 / 文件 / 下载：`open_file_dialog.py`, `save_file_dialog.py`, `confirmation_dialog.py`, `downloads.py`, `drag_drop.py`, `links.py`, `cookies.py`
-
     * 菜单 / 托盘 / 集成：`menu.py`, `pystray_icon.py`, `drag_region.py`, `events.py`
-
     * 跨平台 / 后端专用：`cef.py`, `qt_test.py`, `py2app_setup.py`, `multiple_servers.py`
-
-* **测试驱动**：`references/09-Check&Test&Debug/Test/01-test-driven-development.md`（Red-Green-Refactor / 测试金字塔 / TestClient / 数据驱动 / Mock / 回归纪律）。
-
-* **复用**：写业务代码前先查 `examples/`（认证 `web/account_auth.py`、HTMX 局部刷新、FastAPI 挂载、PyInstaller hidden-import 套路）。
-
+* **测试驱动**：`references/09-Check&Test&Debug/Test/01-test-driven-development.md`（Red-Green-Refactor / 测试金字塔 / TestClient / 数据驱动 / Mock / 回归纪律）。**⑥-β**：每新增业务模块先写失败测试（Red-Green-Refactor）；修 bug 走 Prove-It（先写复现测试）；禁止「先实现后补测」。
+* **复用**：写业务代码前先查 `examples/`（认证 `web/account_auth.py`、HTMX 局部刷新、FastAPI 挂载、PyInstaller hidden-import 套路），能 copy-adapt 就不重写。
 * **产出物**：`src/app.py` + 各模块文件 + `tests/` 对应测试。
-
 * **验收标准**：语法检查 + 导入测试 + 对应单元/集成测试存在且通过（Red-Green-Refactor，禁止先实现后补测）。
 
-#### ⑦ 质量门禁（打包前必过，三阶段按序执行）
+### ⑦ 质量门禁（打包前必过，三阶段按序执行）
 
 * **总入口**：`references/09-Check&Test&Debug/INDEX.md`（Check/Test/Debug 三层心智图）。
-
 * **Check 层（静态关卡，不运行完整应用）**，入口 `references/09-Check&Test&Debug/Check/INDEX.md`：
-
   * `references/09-Check&Test&Debug/Check/01-static-code-checks.md`（语法/导入/Ruff/运行验证/UI 反模式检查）
-
   * `references/09-Check&Test&Debug/Check/02-ui-audit.md`（`ui_audit.py` 13 条禁令 / 产品 UI 检查 / AI Slop / a11y）
-
   * `references/09-Check&Test&Debug/Check/03-route-hygiene.md`（路由显式化 `check_routes.py` / 前端→后端链路 `check_routes_linkage.py`）
-
 * **Test 层（动态验证，运行真实代码路径）**，入口 `references/09-Check&Test&Debug/Test/INDEX.md`：
-
   * `references/09-Check&Test&Debug/Test/01-test-driven-development.md`（TDD 核心）
-
   * `references/09-Check&Test&Debug/Test/02-e2e.md`（业务路径 E2E + 视觉 E2E）
-
-  * `references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md`（冒烟门禁 / 打包前清单 / release\_gate）
-
+  * `references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md`（冒烟门禁 / 打包前清单 / release_gate）
   * `references/09-Check&Test&Debug/Test/04-ui-tools.md`（`ui_audit` / `ui_headless_verify` / `ui_window_verify` / `ui_automate` 分工）
-
 * **Debug 层（失败处理闭环，任何 Check/Test 失败后进入）**，入口 `references/09-Check&Test&Debug/Debug/INDEX.md`：`references/09-Check&Test&Debug/Debug/01-debug-discipline.md`（调试总纲 / Prove-It / Flaky / 干净复测）。
 
-* **阶段一（持续验证）**：`py_compile` + `from app import app` + `uv run pytest` 全绿（见 Check/01）。
-
-* **阶段二（全面验证）**：`启动.bat` 自测 + `ui_audit.py`（禁止跳过，见 Check/02）+ `ui_window_verify.py` + `ui_automate.py`（见 Test/04）。
-
-* **阶段三（预发布门禁）**：`check_routes_linkage.py`（见 Check/03）+ `release_gate.py` + 冒烟测试（见 Test/03）。
-
+* **阶段一（持续验证，每次改代码后立即执行）**：
+  * `py_compile` 语法检查 + `python -c "from app import app"` 导入测试（细则见 Check/01）
+  * `uv run pytest` 单元/集成测试全绿（逻辑门禁，非零即阻断）
+* **阶段二（全面验证，功能开发完成后执行）**：
+  * **用 `启动.bat` 启动应用**，自测正常+异常路径
+  * UI 反模式检查（`scripts/ui_audit.py`，纯 headless，禁止跳过；自动抓取 `<link rel=stylesheet>` 外部 CSS 纳入审计，CSS 外部化项目不再误报；可用 `--ignore-ban "禁令名/序号/子串"` 豁免已知误报；反模式规则详见 Check/02）
+  * 机器视觉质检（`scripts/ui_window_verify.py`：DOM 断言+可选截图；HTML 结构验证通过≠界面没问题；无 GUI 强制 HTML 结构验证）
+  * UI 交互自动化（`scripts/ui_automate.py`：点击/输入/导航/断言，验证交互行为正确性）
+  * 质检脚本详细用法见 `references/09-Check&Test&Debug/Test/04-ui-tools.md`
+  * 测试夹具 schema 对齐：新增测试须用 `scripts/fixture_schema_helper.py` 校验 insert 键全部存在于真实 db 列（见 `docs/troubleshooting.md` 第五章）
+* **阶段三（预发布门禁，打包前执行一次）**：
+  * 前端→后端路由链路校验（`scripts/check_routes_linkage.py`：捕获前端引用但后端未注册的路由，防运行时 404。exit 1 = 阻断发布；规则详见 Check/03）
+  * 统一发布门禁（`scripts/release_gate.py`：串联 pytest → check_routes → check_routes_linkage → UI 视觉质检 → verify_imports → check_refs，全绿才放行）
+  * 冒烟测试（HTTP 200 + 窗口句柄存在 + 后台业务健康端点可达；详见 `references/09-Check&Test&Debug/Test/03-smoke-and-delivery.md`）
+* **警告（核心节流点）**：禁止「绕过 启动.bat、未充分验证就直接打包」。打包只是交付的最后一步，不是验证手段。
+* **警告（打包后又改代码）**：不立即重新打包，先用 `启动.bat` 跑源码验证改动，并主动提示用户当前 EXE 为旧快照；用户确认前不重打包。
+* **放行判据**：pytest 全绿 + 机器视觉质检通过 + 路由链路校验通过 + 主流程走通 + 启动无报错。
 * **产出物**：pytest 报告 + 审计报告 + 质检报告 + 路由链路报告。
-
 * **验收标准**：三个阶段全通过（持续验证 pytest 全绿 → 全面验证机器视觉质检通过 + 主流程走通 → 预发布门禁路由链路校验 + 冒烟通过）。
 
-#### ⑧ 打包
+### ⑧ 打包
 
-* **任务**：最小 venv → PyInstaller `--onefile` → 冒烟测试 → 清理。
-
+* **任务**：门禁已在 ⑦ 预发布阶段通过，本步骤专注构建：最小 venv → PyInstaller `--onefile`（Windows；macOS/Linux 见 `references/11-cross-platform.md`）→ 冒烟测试 → 清理。
 * **必读**：`references/08-packaging.md`（PyInstaller 深度指南）；`references/packaging/INDEX.md`（打包子专题导航，按流程顺序）：
-
   * `references/packaging/01-core-workflow.md`（前置检查 → 打包 → 验证）
-
   * `references/packaging/02-build-commands.md`（--onefile / --console / --noupx 等命令与参数）
-
   * `references/packaging/03-path-and-meta.md`（路径适配与元数据处理）
-
   * `references/packaging/04-advanced-config.md`（版本信息 / 图标 / 构建元数据 / 排除策略）
-
   * `references/packaging/05-smoke-test.md`（打包产物冒烟验证）
-
   * `references/packaging/06-troubleshooting.md`（打包故障排除）
-
   * `references/packaging/07-build-hardening.md`（构建加固：高级陷阱与实战经验）
-
 * **必读（跨平台）**：`references/11-cross-platform.md`（后端矩阵 / 各 OS 打包矩阵 / cefpython3 / DRY-RUN 铁律）。
-
 * **执行**：`scripts/build_windows_exe.py`（Windows）；`scripts/build_cross_platform.py`（非当前 OS 仅 `--dry-run` 命令预演，严禁伪造结果）。
-
+* **跨平台 DRY-RUN 铁律**：PyInstaller 不支持交叉编译；非当前 OS 目标只生成**命令预演**（`--dry-run`），严禁伪造运行结果（见 `references/11-cross-platform.md`）。
+* **警告**：构建必带大 `timeout=600` 或后台运行（PyInstaller --onefile 常 >120s）。
 * **产出物**：`dist/*.exe`（Windows；macOS/Linux 产物见 `references/11-cross-platform.md`）。
-
 * **验收标准**：打包前 pytest 全绿门禁通过 + 冒烟测试通过（HTTP 200 + 窗口正常）+ 跨平台目标遵守 DRY-RUN。
 
-#### ⑨ 交付
+### ⑨ 交付
 
 * **任务**：填写交付清单 → 说明产物位置、用法、退出方式 → 交付确认。
-
 * **必读**：`docs/delivery-checklist.md`（交付清单）；`references/launch-standard-deliverable.md`（启动器完整规则）；`docs/glossary.md`（术语）。
-
-* **要点**：交付清单须含测试证据（pytest 全绿 + 机器视觉质检通过 `ui_window_verify.py`），供用户验收。
-
+* **要点**：交付清单须含测试证据（pytest 全绿 + 机器视觉质检通过 `ui_window_verify.py`），供用户验收参考。
 * **产出物**：已填写的交付清单 + 双用途 README（用户说明书 + LLM 克隆说明书）。
-
 * **验收标准**：用户双击 `启动.bat` 即可独立使用，无需额外配置；README 可对照克隆出同等应用。
-
 ***
 
 ## 必须遵守的铁律（最高优先级）
