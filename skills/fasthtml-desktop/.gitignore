@@ -21,3 +21,7 @@ build/
 # Local venv
 .venv/
 venv/
+
+# 运行时数据库
+*.sqlite
+*.sqlite3

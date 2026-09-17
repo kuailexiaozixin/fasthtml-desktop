@@ -14,7 +14,7 @@
 本技能为 AI Agent 提供一套**标准化、可复现**的 FastHTML 桌面应用开发流程，用 Web 技术栈做出带原生窗口的桌面程序：
 
 - **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
-- **权威文档 HARD-GATE**：`references/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
+- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
 - **20+ 参考实现**：`examples/` 覆盖 CRM、ERP、HRM、财务、进销存、法律、文档、表单等真实业务场景
 - **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
 - **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
@@ -36,6 +36,22 @@
 ---
 
 ## 安装 / 使用
+
+本仓库遵循 [Agent Skills 开放标准](https://agentskills.io)，技能位于 `skills/fasthtml-desktop/`（符合 `gh skill` 的 `skills/*/SKILL.md` 发现约定），可用 **GitHub CLI（≥ v2.90.0）** 一键安装：
+
+```bash
+# 安装到当前项目（project 作用域，默认）
+gh skill install kuailexiaozixin/fasthtml-desktop
+
+# 或安装到用户全局（user 作用域，所有项目可用）
+gh skill install kuailexiaozixin/fasthtml-desktop --scope user
+
+# 查看/搜索/校验
+gh skill list
+gh skill preview kuailexiaozixin/fasthtml-desktop
+```
+
+> 安装时技能被发现为 `fasthtml-desktop`；`gh skill install` 会按需自动注入来源元数据（`metadata.github-*`），支持 `gh skill update` 增量更新与 `--pin <tag>` 版本锁定。
 
 Agent Skills 通常已内置在支持该标准的助手中（Claude、Codex、灵犀、DeepSeek Harness 等原生支持，可直接读取本仓库）；也可将本仓库显式添加为 **Skill / Plugin**：
 
@@ -86,21 +102,21 @@ dsh web
 不依赖 npm，可直接从 GitHub Releases 页面下载源码归档离线安装：
 
 ```bash
-# 下载源码归档（zip 或 tar.gz）
+# 下载源码归档（zip 或 tar.gz），以下载最新 Release 为例
 curl -L -o fasthtml-desktop.zip \
-  https://github.com/kuailexiaozixin/fasthtml-desktop/archive/refs/tags/v1.9.0.zip
-unzip fasthtml-desktop.zip      # 得到 fasthtml-desktop-1.9.0/（内含 SKILL.md）
+  https://github.com/kuailexiaozixin/fasthtml-desktop/archive/refs/heads/main.zip
+unzip fasthtml-desktop.zip      # 得到 fasthtml-desktop-main/（技能位于 skills/fasthtml-desktop/）
 ```
 
 解压后有两种安装方式：
 
 **方式一：放入 dsh 技能发现目录（推荐，最简单）**
 
-把目录重命名为技能名（kebab-case，不含版本号）后放进用户技能目录，dsh 启动时即自动发现：
+把 `skills/fasthtml-desktop` 目录重命名为技能名（kebab-case，不含版本号）后放进用户技能目录，dsh 启动时即自动发现：
 
 ```bash
 mkdir -p ~/.dsh/skills
-mv fasthtml-desktop-1.9.0 ~/.dsh/skills/fasthtml-desktop
+mv fasthtml-desktop-main/skills/fasthtml-desktop ~/.dsh/skills/fasthtml-desktop
 dsh web    # 重启后即可通过 skill 工具加载
 ```
 
@@ -109,7 +125,7 @@ dsh web    # 重启后即可通过 skill 工具加载
 **方式二：作为 dsh 插件从本地目录安装**
 
 ```bash
-dsh plugin --profile web add /绝对路径/fasthtml-desktop-1.9.0
+dsh plugin --profile web add /绝对路径/fasthtml-desktop-main/skills/fasthtml-desktop
 ```
 
 > `dsh plugin add` 支持本地目录路径（pnpm 语义），与从 npm 安装等价。
@@ -132,29 +148,39 @@ dsh plugin --profile web remove dsh-fasthtml-desktop
 
 ## 目录结构
 
+仓库遵循 gh skill 标准发布树（技能本体自包含于 `skills/fasthtml-desktop/`）：
+
 ```
-fasthtml-desktop/
-├── SKILL.md              # 技能主入口（工作流 + 铁律）
-├── CHANGELOG.md          # 版本变更记录
-├── LICENSE               # MIT 许可证
-├── README.md             # 本文件
-├── references/           # 深度参考（架构、模块设计、打包、TDD、集成模式等）
-│   └── fasthtml-refs/    # FastHTML 官方上下文转档（写码前必读）
-├── examples/             # 20+ 参考实现（优先参考）
-│   ├── 03-FastCRM        # 客户关系管理
-│   ├── 04-FastERP        # 企业资源计划
-│   ├── 05-FastHRM        # 人事管理
-│   ├── 06-FastInsights   # 数据洞察
-│   ├── 09-FastSheets     # 电子表格
-│   ├── 12-FastLegal      # 法律服务
-│   └── ...               # 完整列表见 examples/README.md
-├── templates/            # 项目脚手架模板
-├── scripts/              # 构建、校验、门禁自动化脚本
-├── docs/                 # 交付清单、术语表、排障
-├── package.json          # npm 包声明（dsh-fasthtml-desktop，Cordis Bundle）
-├── index.js              # 嵌入式 skill 提供方
-├── cordis.patch.yml      # dsh bundle patch（注册插件）
-└── examples/README.md
+fasthtml-desktop/                # 仓库根
+├── skills/
+│   └── fasthtml-desktop/        # 技能根（gh skill 发现路径 skills/*/SKILL.md）
+│       ├── SKILL.md             # 技能主入口（工作流①→⑨ + 铁律内联）
+│       ├── CHANGELOG.md         # 版本变更记录
+│       ├── LICENSE              # MIT 许可证
+│       ├── README.md            # 本文件
+│       ├── references/          # 深度参考（按工作流①→⑨编号）
+│       │   ├── 02-architecture/ # ② 架构设计（18 章 + 模块设计）
+│       │   ├── 05-coding/       # ⑤ 编码（含 fasthtml-refs/ 官方上下文、pywebview-examples/）
+│       │   ├── 07-quality-gate/ # ⑦ 质量门禁（Check/Test/Debug 三层）
+│       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台 + 7 子专题）
+│       │   └── ...
+│       ├── examples/            # 20+ 参考实现（优先参考）
+│       │   ├── 03-FastCRM       # 客户关系管理
+│       │   ├── 04-FastERP       # 企业资源计划
+│       │   ├── 05-FastHRM       # 人事管理
+│       │   ├── 06-FastInsights  # 数据洞察
+│       │   ├── 09-FastSheets    # 电子表格
+│       │   ├── 12-FastLegal     # 法律服务
+│       │   └── ...              # 完整列表见 examples/README.md
+│       ├── templates/           # 项目脚手架模板
+│       ├── scripts/             # 构建、校验、门禁自动化脚本
+│       ├── docs/                # 交付清单、术语表、排障
+│       ├── package.json         # npm 包声明（dsh-fasthtml-desktop，Cordis Bundle）
+│       ├── index.js             # 嵌入式 skill 提供方
+│       └── cordis.patch.yml     # dsh bundle patch（注册插件）
+├── .github/workflows/ci.yml     # gh skill publish --dry-run + 目录结构校验
+├── .gitattributes               # 强制 .bat 以 CRLF 分发
+└── README.md                    # 仓库级说明（本文件为技能内说明）
 ```
 
 ---
@@ -162,7 +188,7 @@ fasthtml-desktop/
 ## 快速开始（给 Agent）
 
 1. **读取入口**：`SKILL.md` 定义完整工作流与铁律。
-2. **写 FastHTML 代码前**：必读 `references/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
+2. **写 FastHTML 代码前**：必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
 3. **生成项目**：用 `templates/` 脚手架（`bootstrap_project.sh` / `ensure_uv_env`）初始化。
 4. **开发迭代**：FastHTML 路由 + HTMX 交互，参考 `examples/` 中与业务最接近的项目。
 5. **质量门禁**：路由联动检查 + 引用检查 + 无头 UI 验证 + `release_gate.py`。

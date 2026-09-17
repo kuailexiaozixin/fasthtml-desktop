@@ -84,13 +84,13 @@ Button("加载", hx_get="/data", hx_target="#result")
 
 **原因**：`serve()` 内部使用 `reload=True` + import-string，冻结后入口模块路径不可用。
 
-**修复**：改用 `uvicorn.run(app, reload=False)`，参见 `references/07-integration-patterns.md`。
+**修复**：改用 `uvicorn.run(app, reload=False)`，参见 `references/05-coding/integration-patterns.md`。
 
 ### 打包后 EXE 体积过大（>100 MB）
 
 **原因**：PyInstaller 扫描了系统环境中的所有包（torch、scipy 等）。
 
-**修复**：使用最小 venv 打包，参见 `references/08-packaging.md` 体积控制章节。
+**修复**：使用最小 venv 打包，参见 `references/08-packaging/deep-dive.md` 体积控制章节。
 
 ### 打包后 EXE 启动立即崩溃（无任何输出）
 
@@ -110,7 +110,7 @@ PyInstaller 的二进制依赖分析器不会自动追踪这些 `ctypes.CDLL()` 
 
 > **为何不能"复制到 dist/_internal/"**：本技能禁用 `--onedir`，只产出 onefile 单文件 EXE，运行时不存 `dist/_internal/` 目录（`_internal/` 是 onedir 产物）。DLL 必须随 EXE 用 `--add-binary` 一并打包，运行时由 PyInstaller 解包到临时目录加载。`build_windows_exe.ps1` 已自动对 `libffi-8.dll / libcrypto-3-x64.dll / libssl-3-x64.dll` 执行 `--add-binary`，一般无需手动处理。
 
-完整 DLL 诊断流程参见 `references/08-packaging.md` 的 DLL 依赖诊断章节。
+完整 DLL 诊断流程参见 `references/08-packaging/deep-dive.md` 的 DLL 依赖诊断章节。
 
 ### 打包后 EXE 启动提示 `ModuleNotFoundError: No module named 'app'`
 
@@ -121,7 +121,7 @@ PyInstaller 的二进制依赖分析器不会自动追踪这些 `ctypes.CDLL()` 
 
 **修复**：
 - 切换到 PowerShell 执行打包命令
-- 路径含空格时使用 Python subprocess 脚本（见 `references/08-packaging.md` 路径空格章节）
+- 路径含空格时使用 Python subprocess 脚本（见 `references/08-packaging/deep-dive.md` 路径空格章节）
 - onefile 下资源解包到临时目录 `_MEIPASS`，不在 `dist/_internal/`；请确认打包命令包含 `--add-data "src;src"`
 
 ### 路由 404 / 页面导航全部失效（开发态或打包后）
@@ -135,7 +135,7 @@ PyInstaller 的二进制依赖分析器不会自动追踪这些 `ctypes.CDLL()` 
 def project_detail(pid: int): ...
 ```
 
-导航/模板中的 href 必须与显式路径完全一致。APIRouter 默认路由陷阱与正确写法见 `references/09-Check&Test&Debug/Check/02-ui-audit.md` §4.5。
+导航/模板中的 href 必须与显式路径完全一致。APIRouter 默认路由陷阱与正确写法见 `references/07-quality-gate/Check/02-ui-audit.md` §4.5。
 
 ### 打包后 EXE 窗口白屏，但 HTTP 在浏览器中可访问
 

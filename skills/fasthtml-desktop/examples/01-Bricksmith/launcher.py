@@ -5,7 +5,7 @@
 本文件本身在 20 个示例间逐字节相同（由 `scripts/gen_launchers.py` 统一分发）。
 含义：改逻辑只改这一份；改某个示例的行为只改它的 `launcher.json`。
 
-设计铁律（见 SKILL.md §标准交付物 / references/launch-standard-deliverable.md）：
+设计铁律（见 SKILL.md §标准交付物 / references/04-project-init.md）：
   * **bat 只派发、Python 做决策**：`启动.bat` 仅 `cd` + 确认 PATH 有 python +
     调用 `python launcher.py %*`（≤8 行）。依赖预检 / 安装 / 降级防护 / WebView2
     探测 / 日志取证全部在本引擎，用 `sys.executable` 天然消除解释器二义性。

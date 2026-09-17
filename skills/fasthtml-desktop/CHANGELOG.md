@@ -1,5 +1,68 @@
 # 变更记录
 
+## 1.12.0 (2026-09-17)
+
+### 重构
+- **「架构约束（选型前必读）」并入 ② 架构设计**：删除 SKILL.md 独立章节，内容内联为「铁律（架构选型：服务端渲染约束，选型前必读）」，置于 ② 架构分层铁律之前——FastHTML 服务端渲染本质（磁盘无静态 HTML 入口）、禁用依赖静态 HTML 入口的工具（注入式质检 / /live 热重载 / SSR 预渲染）、正确路径是真实渲染引擎驱动（ui_window_verify / ui_automate / ui_audit）。至此 SKILL.md 全部规则并入工作流①→⑨，无任何独立规则章节。
+
+### 修改
+- **SKILL.md frontmatter 补 `license: MIT`**：对齐 Agent Skills 开放规范（agentskills.io）与 `gh skill publish` 校验项（license 为推荐字段），version 升至 1.12.0。
+- **README 安装章节新增 `gh skill install` 方式**：本仓库为 root-level 单技能仓库（`*/SKILL.md`），符合 `gh skill` 发现约定（`skills/*/SKILL.md`、`skills/{scope}/*/SKILL.md`、`*/SKILL.md`、`plugins/{scope}/skills/*/SKILL.md`），支持 `gh skill install / list / preview / update --pin`。
+
+### 验证
+- gh skill 发布合规逐项核验通过：name `fasthtml-desktop` 符合 kebab-case 命名规则且与目录名（仓库名）匹配；description 存在；license 已补；无 allowed-tools 数组问题；无 metadata.github-* 安装元数据残留；SKILL.md 261 行 < 500 行建议上限。
+## 1.11.0 (2026-09-17)
+
+### 重构
+- **SKILL.md 铁律融入工作流**：删除独立章节「必须遵守的铁律（最高优先级）」「命令代执行规则」「代码与结构原则（架构分层铁律 / TDD 铁律）」，全部内容内联到对应工作流步骤——② 架构设计（架构分层/模块化业务域优先/数据模型状态机前置/接口契约落 pytest）、③ 环境准备（环境先行/venv/依赖管理分级/命令代执行/命令超时）、④ 项目初始化（bootstrap 铁律/一键启动器全规则）、⑤ 编码（编码铁律/TDD 红绿重构/修改后验证纪律）、⑥ 界面完善（机器视觉质检门禁）、⑦ 质量门禁（pytest 非零阻断/冒烟健康端点）、⑧ 打包（onefile/hidden-import/DRY-RUN/服务启动时序）。SKILL.md 成为纯工作流驱动文档：读到哪步执行哪步规则，无分散章节。
+- **references 按工作流①→⑨编号重组**：
+  - ① `01-need-discovery.md`（不变）
+  - ② `02-architecture/`（原 architecture/ 18 章 + module-design.md）
+  - ③ `03-environment.md`（新建：从原 04-agent-execution-and-env.md 拆出环境部分）
+  - ④ `04-project-init.md`（原 launch-standard-deliverable.md + 项目初始化流程）
+  - ⑤ `05-coding/`（project-structure / ui-design / pywebview-shell / integration-patterns / ft-handlers-typing / fasthtml-fastapi / execution-and-env / fasthtml-refs / pywebview-examples）
+  - ⑥ `06-ui-polish.md`（新建：界面完善流程 + 机器视觉质检分工）
+  - ⑦ `07-quality-gate/`（原 09-Check&Test&Debug/）
+  - ⑧ `08-packaging/`（deep-dive + cross-platform + 原 packaging/ 7 章）
+  - ⑨ `09-delivery.md`（新建：交付清单要点 + 双用途 README）
+
+### 修改
+- 全部文件引用路径更新为重组后路径（references 内部、SKILL.md、docs/troubleshooting.md、scripts/build_cross_platform.py、README.md、contributing.md、templates/shared/launcher.py、examples/*/launcher.py、pywebview-examples 注释）。
+- `02-architecture/INDEX.md` 新增模块设计导航；`08-packaging/INDEX.md` 新增 deep-dive/cross-platform 总览。
+
+### 清理
+- 删除 `references/04-agent-execution-and-env.md`（拆分为 03-environment.md 与 05-coding/execution-and-env.md）。
+- 删除空的 `references/packaging/` 目录（文件已并入 08-packaging/）。
+## 1.10.0 (2026-09-17)
+
+### 重构
+- **SKILL.md 工作流重构**：② 架构设计合并原 ②-α 功能模块设计（删除 ②-α 独立步骤），任务扩展为「定骨架（几层/哪几个业务域/域间依赖方向）+ 定域内细节（每域功能清单/接口契约/数据流）+ 数据模型与状态机前置 + 界面设计活动（信息架构/布局决策/设计系统选型）」，产出物首位为表结构清单 + 状态机定义，接口契约直接落 pytest 骨架文件（契约/测试/实现同步演进）。
+- **步骤⑤⑥ 语义与顺序调整**：原 ⑤ 界面设计（纯界面原型）→ 新 ⑤ 编码（界面与业务一体，按 ② 分层骨架与页面结构清单编码，不制作独立原型文件）；原 ⑥ 编码 → 新 ⑥ 界面完善与视觉质检（逐页打磨观感 + ui_window_verify / ui_automate / ui_audit 机器质检）。
+- **不制作原型**：删除「先原型后业务」两段式工作流——服务端渲染下界面即路由函数返回的 HTML 片段，设计活动并入 ②，界面与业务同步演进（参照 examples/04-FastERP/）。
+
+### 修改
+- `references/05-project-structure.md`：标准项目结构改为**分层模块化**（`web/` 表示层 + `services/` 业务域包 + `db.py` 数据层），不再提及扁平包；模块划分改为**业务域优先**（sales/purchasing/inventory/accounting 第一维度，auth/config/errors 技术横切第二维度）。
+- `references/02-module-design.md`：定位改为「② 架构设计阶段内使用」；新增**业务域优先命名模板**（业务域视角示例表，与技术视角示例并存）。
+- `references/03-ui-design.md`：整体重写——由「原型驱动」改为「界面设计」方法论：设计活动（信息架构/布局决策/设计系统选型）在 ② 完成；界面实现与完善（⑤/⑥）；保留 frontend-design 五步方法论、图标处理、布局模板、反模式校准全部内容；新增设计系统收敛到 `layout.py`（参照 FastERP `web/layout.py`）。
+- `SKILL.md` 架构分层铁律：模块化表述升级为**业务域优先**，显式引用 `examples/04-FastERP/fasterp/`。
+
+### 清理
+- 删除 `templates/prototype-app.py.tmpl`（UI 原型模板，工作流不再制作原型；无脚本引用）。
+
+## 1.9.1 (2026-09-17)
+
+### 清理
+- 清除文档中的历史演进残留（技能修改/文档变动/文件迁移类表述）：
+eferences/07-integration-patterns.md 删除「原四个技能」指代；
+eferences/launch-standard-deliverable.md 删除「旧 sync_launchers.py 已废弃」「旧版 启动.bat」历史叙事；
+eferences/fasthtml-refs/genui-hypermedia-reference.md 的「现状（2026-08 修正）/早期方案/本技能后期」改为现状描述；
+eferences/09-Check&Test&Debug/Check/02-ui-audit.md 的「旧版漏检」改为中性能力表述。历史变更统一只在本文件记录。
+- 删除根目录历史快照 SKILL.md.bak.20260901-152817（对应 1.9.0 重构，已在本文件记录）。
+
+### 修改
+- 
+eferences/launch-standard-deliverable.md 章节与条目统一编号：顶层章节改为「一、场景分叉铁律 / 二、通用规则 / 三、启动器 A / 四、启动器 B / 五、方法论小结」，通用规则 9 条、启动器 A 4 条条目顺序编号。
+
 ## 1.9.0 (2026-09-01)
 
 ### 重构

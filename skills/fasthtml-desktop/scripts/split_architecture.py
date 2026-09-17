@@ -1,4 +1,4 @@
-"""将 references/02-architecture.md 拆分为 references/architecture/ 目录"""
+"""将 references/02-architecture.md 拆分为 references/02-architecture/ 目录"""
 import re, pathlib, shutil
 import sys
 
@@ -112,7 +112,7 @@ print(f"\n  [OK] INDEX.md — 入口索引")
 # 更新 02-architecture.md 为入口文件
 new_header = f"""# 架构设计参考（入口）
 
-> **注意**：本文档已拆分为 `references/architecture/` 目录下的独立文件。
+> **注意**：本文档已拆分为 `references/02-architecture/` 目录下的独立文件。
 > 请访问 [architecture/INDEX.md](architecture/INDEX.md) 查看完整索引。
 > 
 > 本文保留完整原始内容，供全局搜索和全文检索使用。

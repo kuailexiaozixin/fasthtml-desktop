@@ -21,3 +21,7 @@ build/
 # Local venv
 .venv/
 venv/
+
+# Runtime databases
+*.sqlite
+*.sqlite3

@@ -7,7 +7,7 @@
   --platform 缺省 = 当前平台。非当前平台仅生成配置/命令预演（--dry-run 语义），不实际构建
   （PyInstaller 不支持交叉编译——这是官方事实，不是本脚本限制）。
 
-hidden-import 矩阵（T1 源码内省铁证，pywebview 6.2.1 guilib.py + platforms/*.py，见 references/11-cross-platform.md）：
+hidden-import 矩阵（T1 源码内省铁证，pywebview 6.2.1 guilib.py + platforms/*.py，见 references/08-packaging/cross-platform.md）：
   Windows : webview.platforms.winforms + edgechromium + mshtml + clr(pythonnet)
   macOS   : webview.platforms.cocoa（依赖 pyobjc：AppKit/Foundation/WebKit/objc/PyObjCTools）+ 回退 webview.platforms.qt
   Linux   : webview.platforms.gtk（依赖 PyGObject: gi）+ 回退 webview.platforms.qt
