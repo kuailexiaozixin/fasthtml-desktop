@@ -1,0 +1,2204 @@
+"""
+LiquidRound — AI-Powered M&A Research Platform
+Chat-first FastHTML app. Deployed with uvicorn.
+"""
+import os, uuid, time, asyncio, collections, json, logging, re, threading
+from dotenv import load_dotenv
+load_dotenv()
+log = logging.getLogger(__name__)
+
+from fasthtml.common import *
+from starlette.responses import RedirectResponse, Response, JSONResponse
+from starlette.datastructures import UploadFile
+from pathlib import Path
+from utils.security import (
+    ensure_csrf_token,
+    is_admin,
+    is_local_auth_bypass,
+    safe_upload_target,
+    validate_same_origin,
+    UPLOAD_MAX_BYTES,
+)
+
+# Background work is disabled in tests and may be disabled for web-only replicas.
+_background_jobs_enabled = os.getenv(
+    "BACKGROUND_JOBS_ENABLED",
+    "false" if os.getenv("ENVIRONMENT", "").lower() == "test" else "true",
+).lower() in {"1", "true", "yes"}
+
+# Pre-fetch news in background so first request is instant
+def _prefetch_news():
+    from utils.news import fetch_news
+    try:
+        asyncio.run(fetch_news())
+    except Exception:
+        pass
+
+if _background_jobs_enabled:
+    _news_t = threading.Thread(target=_prefetch_news, daemon=True)
+    _news_t.start()
+
+# ---------------------------------------------------------------------------
+# In-process scheduler — config via .env, no external cron
+# ---------------------------------------------------------------------------
+from utils.scheduler import start as _start_scheduler
+if _background_jobs_enabled:
+    _start_scheduler()
+
+# ---------------------------------------------------------------------------
+# App setup — auth gate on /app/* routes
+# ---------------------------------------------------------------------------
+_OG_DESC = "AI-powered M&A, IPO readiness, and public markets intelligence. A squad of specialist AI analysts in one chat-first workspace."
+_environment = os.getenv("ENVIRONMENT", "development").lower()
+_session_secret = os.getenv("SESSION_SECRET", "")
+if _environment == "production" and (
+    len(_session_secret) < 32
+    or _session_secret in {"liquidround-dev-secret-change-me", "liquidround-prod-secret"}
+):
+    raise RuntimeError("Production requires a strong SESSION_SECRET of at least 32 characters")
+if not _session_secret:
+    _session_secret = "liquidround-local-development-secret"
+
+app, rt = fast_app(
+    pico=False,
+    hdrs=(
+        Title("LiquidRound"),
+        Script(src="https://cdn.tailwindcss.com"),
+        Script(src="https://cdn.plot.ly/plotly-2.32.0.min.js"),
+        Link(rel="stylesheet", href="/app.css"),
+        Link(rel="stylesheet", href="/pipeline.css"),
+        Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
+        Link(rel="icon", type="image/png", sizes="32x32", href="/favicon.png"),
+        Link(rel="alternate icon", type="image/x-icon", href="/favicon.ico"),
+        Link(rel="apple-touch-icon", sizes="180x180", href="/apple-touch-icon.png"),
+        Meta(name="viewport", content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"),
+        Meta(name="mobile-web-app-capable", content="yes"),
+        Meta(name="apple-mobile-web-app-capable", content="yes"),
+        Meta(name="apple-mobile-web-app-status-bar-style", content="default"),
+        Meta(name="theme-color", content="#2563eb"),
+        Meta(name="description", content=_OG_DESC),
+        Meta(property="og:type", content="website"),
+        Meta(property="og:site_name", content="LiquidRound"),
+        Meta(property="og:title", content="LiquidRound — AI ECM Agent Squad"),
+        Meta(property="og:description", content=_OG_DESC),
+        Meta(property="og:image", content="https://liquidround.ai/og-image.png"),
+        Meta(name="twitter:card", content="summary_large_image"),
+        Meta(name="twitter:title", content="LiquidRound — AI ECM Agent Squad"),
+        Meta(name="twitter:description", content=_OG_DESC),
+    ),
+    static_path="static",
+    secret_key=_session_secret,
+)
+
+
+# ---------------------------------------------------------------------------
+# Auth gate: redirect unauthenticated users on /app/* to /signin
+# After sign-in, users are redirected back to their original URL (including
+# shared chat links /app/s/*).
+# ---------------------------------------------------------------------------
+_AUTH_EXEMPT_PATHS = {"/app/news", "/app/news/html", "/app/news/search"}
+_AUTH_EXEMPT_PREFIXES = ("/app/s/",)
+_AUTH_REQUIRED_PREFIXES = (
+    "/app", "/profile", "/conversation", "/conversations",
+    "/chat", "/upload", "/research", "/api",
+)
+_ADMIN_PREFIXES = ()
+_ADMIN_MUTATIONS = {
+    "/app/reverse-mergers/sync",
+    "/app/reverse-mergers/sync-sedar",
+    "/app/reverse-mergers/sync-news",
+    "/app/digest/send-all",
+    "/app/deals/generate",
+    "/app/sync/ee",
+    "/app/sync/no",
+    "/app/ipo-map/refresh",
+    "/app/ipo-pipeline/refresh",
+    "/app/spacs/refresh",
+    "/app/reverse-mergers/import",
+}
+
+
+def _auth_gate(req, session):
+    path = req.url.path
+    if is_local_auth_bypass():
+        return None
+    protected = any(path == p or path.startswith(p + "/") for p in _AUTH_REQUIRED_PREFIXES)
+    exempt = path in _AUTH_EXEMPT_PATHS or any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES)
+    if protected and not exempt and not session.get("user"):
+        return RedirectResponse(f"/signin?next={path}", status_code=302)
+    if (
+        any(path.startswith(p) for p in _ADMIN_PREFIXES)
+        or (req.method.upper() != "GET" and path in _ADMIN_MUTATIONS)
+    ) and not is_admin(session):
+        return JSONResponse({"error": "Administrator access required"}, status_code=403)
+
+
+def _csrf_gate(req, session):
+    if is_local_auth_bypass() or req.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+    if session.get("user") and not validate_same_origin(req, session):
+        return JSONResponse({"error": "Invalid request origin"}, status_code=403)
+    ensure_csrf_token(session)
+
+
+app.before.append(_auth_gate)
+app.before.append(_csrf_gate)
+
+# Register landing-page routes FIRST so `/` resolves to the landing, not the chat
+from routes.landing import ar as landing_router
+landing_router.to_app(app)
+
+# Register public tool routes (/tools/*, /industries/*)
+from routes.tools import ar as tools_router
+tools_router.to_app(app)
+
+# Register public blog routes (/blog, /blog/{slug}, /blog/rss)
+from routes.blog import ar as blog_router
+blog_router.to_app(app)
+
+# Register auth routes (login/register still available)
+from routes.auth import ar as auth_router
+auth_router.to_app(app)
+
+# Register existing tool routes for direct access
+from routes.upload import ar as upload_router
+from routes.research import ar as research_router
+upload_router.to_app(app)
+research_router.to_app(app)
+
+# Register API routes (company-profile, score-match, etc.)
+from routes.api import ar as api_router
+api_router.to_app(app)
+
+# Register pipeline routes
+from routes.pipeline import ar as pipeline_router
+pipeline_router.to_app(app)
+
+# Register company search + detail routes (/app/companies, /app/company/{slug})
+from routes.companies import ar as companies_router
+companies_router.to_app(app)
+
+# Register digest routes (daily deal digest + email)
+from routes.digest import ar as digest_router
+digest_router.to_app(app)
+
+# Register memo → PDF preview routes (/app/memo-pdf/*)
+from chat_memo_pdf import ar as memo_pdf_router
+memo_pdf_router.to_app(app)
+
+# Register valuation simulator routes (/app/valuation/*)
+from valuation import ar as valuation_router
+valuation_router.to_app(app)
+
+# Register Deal Street training game routes (/app/training/*)
+from game.routes import ar as game_router
+game_router.to_app(app)
+
+# Register analytics routes (/app/analytics, /app/analytics/run)
+from routes.analytics import ar as analytics_router
+analytics_router.to_app(app)
+
+# Register export routes (XLSX, DOCX, chart)
+from routes.exports import ar as exports_router
+exports_router.to_app(app)
+
+# Register data room routes (/app/dataroom)
+from routes.dataroom import ar as dataroom_router
+dataroom_router.to_app(app)
+
+# Register IPO Map + IPO Pipeline routes (/app/ipo-map, /app/ipo-pipeline)
+from routes.ipo_map import ar as ipo_map_router
+ipo_map_router.to_app(app)
+from routes.ipo_pipeline import ar as ipo_pipeline_router
+ipo_pipeline_router.to_app(app)
+
+# Register Prospectus Builder routes (/app/prospectus)
+from routes.prospectus import ar as prospectus_router
+prospectus_router.to_app(app)
+
+# Register hedge fund routes (/app/hedgefunds)
+from routes.hedge_funds import ar as hedge_funds_router
+hedge_funds_router.to_app(app)
+
+# Register SEC EDGAR filing routes (/app/filings)
+from routes.filings import ar as filings_router
+filings_router.to_app(app)
+
+# Register press releases (/app/press-releases)
+from routes.press_releases import ar as press_releases_router
+press_releases_router.to_app(app)
+
+# Register Investor Relations drafting tools
+from routes.investor_relations import ar as investor_relations_router
+investor_relations_router.to_app(app)
+
+# Register SPAC tracker (/app/spacs)
+from routes.spacs import ar as spacs_router
+spacs_router.to_app(app)
+
+# Register reverse-merger / RTO monitor (/app/reverse-mergers)
+from routes.reverse_mergers import ar as reverse_mergers_router
+reverse_mergers_router.to_app(app)
+
+# Register help page (/app/help)
+from routes.help import ar as help_router
+help_router.to_app(app)
+
+# Register skills editor + prompt versioning API
+from routes.instructions import ar as instructions_router
+instructions_router.to_app(app)
+
+# Register per-user contextual news feed configuration
+from routes.news_feeds import ar as news_feeds_router
+news_feeds_router.to_app(app)
+
+# Register Deal Radar + Methodology + Data Coverage routes
+from routes.deal_radar import ar as deal_radar_router
+deal_radar_router.to_app(app)
+
+# ---------------------------------------------------------------------------
+# News feed routes
+# ---------------------------------------------------------------------------
+@rt("/health/live")
+def health_live():
+    return JSONResponse({"status": "ok", "service": "liquidround"})
+
+
+@rt("/health/ready")
+def health_ready():
+    """Readiness includes configuration and database reachability when configured."""
+    checks = {"config": "ok"}
+    status_code = 200
+    if os.getenv("DB_URL"):
+        try:
+            from utils.database import get_conn
+            with get_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT 1")
+                cur.fetchone()
+            checks["database"] = "ok"
+        except Exception:
+            checks["database"] = "unavailable"
+            status_code = 503
+    else:
+        checks["database"] = "not-configured"
+    from utils.hermes_agent import hermes_status
+    hermes = hermes_status()
+    checks["hermes"] = (
+        "ready" if hermes.enabled and hermes.available
+        else "disabled" if not hermes.enabled
+        else "unavailable"
+    )
+    return JSONResponse(
+        {"status": "ok" if status_code == 200 else "not-ready", "checks": checks},
+        status_code=status_code,
+    )
+
+
+@rt("/app/news")
+async def news_feed_json(session):
+    from utils.news import fetch_news
+    user_id = (session.get("user") or {}).get("user_id")
+    articles = await fetch_news(user_id)
+    return JSONResponse({"articles": articles})
+
+
+@rt("/app/news/html")
+async def news_feed_html(session):
+    """HTMX HTML fragment — renders news items for the right pane."""
+    from utils.news import fetch_news
+    from datetime import datetime, timezone
+    user_id = (session.get("user") or {}).get("user_id")
+    articles = await fetch_news(user_id)
+
+    def _time_ago(iso: str) -> str:
+        try:
+            dt = datetime.fromisoformat(iso)
+            diff = (datetime.now(tz=timezone.utc) - dt).total_seconds()
+            if diff < 60:
+                return "now"
+            if diff < 3600:
+                return f"{int(diff // 60)}m ago"
+            if diff < 86400:
+                return f"{int(diff // 3600)}h ago"
+            return f"{int(diff // 86400)}d ago"
+        except Exception:
+            return ""
+
+    items = []
+    for a in articles[:30]:
+        items.append(
+            A(
+                Div(
+                    Span(a["icon"], cls="news-source"),
+                    Span(_time_ago(a["published"]), cls="news-time"),
+                    cls="news-item-header",
+                ),
+                Div(a["title"], cls="news-item-title"),
+                Div(a.get("summary", "")[:120], cls="news-item-summary") if a.get("summary") else "",
+                href=a["url"], target="_blank", rel="noopener",
+                cls="news-item",
+            )
+        )
+    if not items:
+        items.append(Div("No news available.", cls="news-empty",
+                         style="color:var(--ink-dim); font-size:.78rem; padding:1rem;"))
+    return Div(*items)
+
+
+@rt("/app/news/search")
+async def news_search(q: str = ""):
+    """Tavily-powered contextual news search — returns JSON articles."""
+    if not q or len(q) < 3:
+        return JSONResponse({"articles": []})
+    try:
+        from utils.research_tools import research_tools
+        result = await research_tools.tavily_search(q)
+        articles = []
+        for r in result.get("results", []):
+            source = "WEB"
+            url = r.get("url", "")
+            if "bloomberg" in url:
+                source = "BBG"
+            elif "ft.com" in url:
+                source = "FT"
+            elif "reuters" in url:
+                source = "RTR"
+            elif "wsj.com" in url:
+                source = "WSJ"
+            elif "sec.gov" in url:
+                source = "SEC"
+            elif "cnbc" in url:
+                source = "CNBC"
+            articles.append({
+                "title": r.get("title", ""),
+                "url": url,
+                "summary": (r.get("content") or "")[:200],
+                "source": source,
+                "published": "",
+            })
+        return JSONResponse({"articles": articles})
+    except Exception as e:
+        log.warning("Tavily news search failed: %s", e)
+        return JSONResponse({"articles": []})
+
+
+# ---------------------------------------------------------------------------
+# Daily deals email routes
+# ---------------------------------------------------------------------------
+@rt("/app/deals/send-test", methods=["POST"])
+async def send_test_deals():
+    """Send a test daily deals digest to TO_EMAIL."""
+    from utils.deals_scanner import (
+        scan_top_companies, scan_recent_additions, fetch_ma_news,
+        build_digest_html, build_digest_text,
+    )
+    from utils.email import send_email
+    from datetime import datetime as _dt
+
+    companies = scan_top_companies(limit=10)
+    recent = scan_recent_additions(limit=5)
+    news = fetch_ma_news(num_results=8)
+    html = build_digest_html(companies, news, recent)
+    text = build_digest_text(companies, news)
+
+    to = os.getenv("TO_EMAIL", "kaljuvee@gmail.com")
+    subject = f"LiquidRound Daily Deals — {_dt.now().strftime('%b %d, %Y')}"
+    result = send_email(to=to, subject=subject, html_body=html, text_body=text, tag="daily-deals")
+    return JSONResponse(result)
+
+
+@rt("/app/deals/preview")
+async def preview_deals():
+    """Preview the daily deals digest as HTML (no email sent)."""
+    from utils.deals_scanner import (
+        scan_top_companies, scan_recent_additions, fetch_ma_news,
+        build_digest_html,
+    )
+    companies = scan_top_companies(limit=10)
+    recent = scan_recent_additions(limit=5)
+    news = fetch_ma_news(num_results=8)
+    html = build_digest_html(companies, news, recent)
+    return Response(content=html, media_type="text/html")
+
+
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+DOCS_DIR = Path("docs")
+DOCS_DIR.mkdir(exist_ok=True)
+DOCS_DATA_DIR = Path("docs-data")
+DOCS_DATA_DIR.mkdir(exist_ok=True)
+
+# All folders to search for documents
+DOC_FOLDERS = [DOCS_DATA_DIR, DOCS_DIR, UPLOAD_DIR]
+
+
+# ---------------------------------------------------------------------------
+# Document serving routes
+# ---------------------------------------------------------------------------
+
+@rt("/doc/view")
+async def doc_view(fn: str = ""):
+    """Serve a document file (PDF, etc.) from docs/ or uploads/."""
+    if not fn:
+        return Response("Missing filename", status_code=400)
+    filename = Path(fn).name
+    for folder in DOC_FOLDERS:
+        path = folder / filename
+        if path.exists():
+            from starlette.responses import FileResponse
+            return FileResponse(str(path), media_type="application/pdf" if filename.endswith(".pdf") else "application/octet-stream")
+    return Response("File not found", status_code=404)
+
+
+@rt("/doc/panel")
+def doc_panel(fn: str = ""):
+    """Return the right-pane document viewer HTML partial."""
+    if not fn:
+        return _doc_list_for_pane()
+    filename = Path(fn).name
+    return _doc_viewer_content(filename)
+
+
+def _doc_viewer_content(filename: str):
+    """Build the document viewer pane content."""
+    ext = Path(filename).suffix.lower()
+    if ext == ".pdf":
+        viewer = Iframe(src=f"/doc/view?fn={filename}", cls="w-full h-full border-0", style="min-height: 70vh;")
+    else:
+        viewer = Div(P(f"Preview not available for {ext} files.", cls="text-sm text-gray-500"), P("Use the download link below.", cls="text-xs text-gray-400 mt-1"))
+    return Div(
+        Div(
+            Span(filename, cls="text-sm font-medium text-gray-800 truncate"),
+            A("Download", href=f"/doc/view?fn={filename}", target="_blank", cls="text-xs text-blue-600 hover:underline"),
+            cls="flex items-center justify-between mb-2",
+        ),
+        viewer,
+        Div(
+            Button(
+                "Key Terms",
+                hx_post="/chat",
+                hx_vals=json.dumps({"msg": f"keyterms {filename}"}),
+                hx_target="#chat-area",
+                hx_swap="beforeend",
+                hx_on__before_request=_THINKING_JS,
+                hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+                cls="flex-1 mt-3 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700",
+            ),
+            Button(
+                "Score: Find Buyers",
+                hx_post="/chat",
+                hx_vals=json.dumps({"msg": f"score doc:{filename}"}),
+                hx_target="#chat-area",
+                hx_swap="beforeend",
+                hx_on__before_request=_THINKING_JS,
+                hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+                cls="flex-1 mt-3 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700",
+            ),
+            cls="flex gap-2",
+        ),
+        cls="p-3 h-full flex flex-col",
+    )
+
+
+def _doc_list_for_pane():
+    """List all available documents in docs/ and uploads/."""
+    files = []
+    for folder in DOC_FOLDERS:
+        if folder.exists():
+            for f in sorted(folder.iterdir()):
+                if f.is_file() and f.suffix.lower() in (".pdf", ".xlsx", ".xls", ".pptx", ".ppt"):
+                    files.append(f.name)
+    if not files:
+        return Div(P("No documents yet.", cls="text-sm text-gray-400 italic"), P("Upload a file via the chat or use the paperclip button.", cls="text-xs text-gray-300 mt-1"), cls="p-4")
+    items = []
+    for fname in files:
+        ext = Path(fname).suffix.lower()
+        badge_cls = {"pdf": "bg-red-100 text-red-700", ".xlsx": "bg-green-100 text-green-700", ".xls": "bg-green-100 text-green-700", ".pptx": "bg-orange-100 text-orange-700", ".ppt": "bg-orange-100 text-orange-700"}
+        b_cls = badge_cls.get(ext, "bg-gray-100 text-gray-600")
+        items.append(
+            Div(
+                Div(
+                    Span(ext[1:].upper(), cls=f"text-xs font-bold px-1.5 py-0.5 rounded {b_cls}"),
+                    Span(fname, cls="text-sm text-gray-800 truncate ml-2"),
+                    cls="flex items-center",
+                ),
+                Div(
+                    Button("View", hx_get=f"/doc/panel?fn={fname}", hx_target="#canvas-content", cls="text-xs text-blue-600 hover:underline"),
+                    Button("Key Terms", hx_post="/chat", hx_vals=json.dumps({"msg": f"keyterms {fname}"}), hx_target="#chat-area", hx_swap="beforeend", hx_on__before_request=_THINKING_JS, hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();", cls="text-xs text-purple-600 hover:underline ml-2"),
+                    Button("Score", hx_post="/chat", hx_vals=json.dumps({"msg": f"score doc:{fname}"}), hx_target="#chat-area", hx_swap="beforeend", hx_on__before_request=_THINKING_JS, hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();", cls="text-xs text-green-600 hover:underline ml-2"),
+                    cls="flex mt-1",
+                ),
+                cls="py-2 border-b border-gray-100",
+            )
+        )
+    return Div(
+        P("Documents", cls="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2"),
+        *items,
+        cls="p-3",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Canvas routes — dynamic right pane content
+# ---------------------------------------------------------------------------
+# In-memory store for last research/score/compare results per session
+_canvas_state = {}
+
+@rt("/canvas/docs")
+def canvas_docs():
+    """Canvas tab: document list."""
+    return _doc_list_for_pane()
+
+@rt("/canvas/research")
+def canvas_research():
+    """Canvas tab: last research results."""
+    data = _canvas_state.get("research")
+    if not data:
+        return Div(
+            P("No research results yet.", cls="text-sm text-gray-400 italic"),
+            P("Run a research query or ask a question to see results here.", cls="text-xs text-gray-300 mt-1"),
+            cls="p-4",
+        )
+    parts = []
+    for r in data.get("exa", {}).get("results", [])[:8]:
+        parts.append(Div(
+            Span("DEEP", cls="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded mr-2"),
+            A(r.get("title",""), href=r.get("url",""), target="_blank", cls="text-sm text-blue-700 hover:underline"),
+            P(r.get("snippet","")[:150], cls="text-xs text-gray-500 mt-0.5"),
+            cls="py-2 border-b border-gray-50",
+        ))
+    for r in data.get("tavily", {}).get("results", [])[:8]:
+        parts.append(Div(
+            Span("WEB", cls="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded mr-2"),
+            A(r.get("title",""), href=r.get("url",""), target="_blank", cls="text-sm text-blue-700 hover:underline"),
+            P(r.get("content","")[:150], cls="text-xs text-gray-500 mt-0.5"),
+            cls="py-2 border-b border-gray-50",
+        ))
+    if not parts:
+        parts.append(P("No results found.", cls="text-sm text-gray-400"))
+    return Div(
+        P("Research Results", cls="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2"),
+        *parts,
+        cls="p-3",
+    )
+
+@rt("/canvas/scores")
+def canvas_scores():
+    """Canvas tab: last scoring results."""
+    data = _canvas_state.get("scores")
+    if not data:
+        return Div(
+            P("No scoring results yet.", cls="text-sm text-gray-400 italic"),
+            P("Score a buyer-target match or a pitch deck to see results here.", cls="text-xs text-gray-300 mt-1"),
+            cls="p-4",
+        )
+    # Render stored score data
+    parts = []
+    profile = data.get("company_profile", {})
+    if profile:
+        parts.append(Div(
+            H3(f"Company: {profile.get('name', 'Unknown')}", cls="font-semibold text-gray-800 text-sm"),
+            P(profile.get("business_model", ""), cls="text-xs text-gray-600 mt-1"),
+            cls="bg-gray-50 rounded-lg p-3 mb-3",
+        ))
+    matches = data.get("buyer_matches", [])
+    if not matches and "dimensions" in data:
+        # Single score result
+        from components.cards import ScoreCard
+        from components.charts import RadarChart
+        parts.append(ScoreCard(data))
+        parts.append(RadarChart("canvas-radar", data.get("dimensions", {})))
+    else:
+        for i, match in enumerate(matches, 1):
+            parts.append(_buyer_match_card(match, i))
+    return Div(
+        P("Scoring Results", cls="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2"),
+        *parts,
+        cls="p-3",
+    )
+
+@rt("/canvas/compare")
+def canvas_compare():
+    """Canvas tab: last valuation comparison."""
+    data = _canvas_state.get("compare")
+    if not data:
+        return Div(
+            P("No comparison data yet.", cls="text-sm text-gray-400 italic"),
+            P("Run a valuation comparison to see results here.", cls="text-xs text-gray-300 mt-1"),
+            cls="p-4",
+        )
+    return Div(
+        P("Valuation Comparison", cls="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2"),
+        data,  # Pre-rendered FT component
+        cls="p-3",
+    )
+
+
+def _buyer_match_card(match, index):
+    """Reusable buyer match card for chat and canvas."""
+    rec = match.get("recommendation", "N/A")
+    rec_cls = {"STRONG BUY": "bg-green-100 text-green-800", "PROCEED": "bg-blue-100 text-blue-800",
+               "CAUTIOUS": "bg-yellow-100 text-yellow-800", "PASS": "bg-red-100 text-red-800"}.get(rec, "bg-gray-100")
+    dims = match.get("dimensions", {})
+    dim_bars = []
+    for dk in ["revenue_synergies","cost_synergies","strategic_fit","cultural_fit","financial_health","integration_risk","market_timing"]:
+        dv = dims.get(dk, {})
+        s = dv.get("score", 5) if isinstance(dv, dict) else 5
+        bar_w = s * 10
+        bar_c = "bg-green-500" if s >= 7 else "bg-yellow-500" if s >= 5 else "bg-red-500"
+        dim_bars.append(Div(
+            Div(Span(dk.replace("_"," ").title(), cls="text-xs text-gray-500"), Span(f"{s}/10", cls="text-xs font-medium"), cls="flex justify-between"),
+            Div(Div(cls=f"{bar_c} h-1.5 rounded-full", style=f"width:{bar_w}%"), cls="w-full bg-gray-200 rounded-full h-1.5"),
+            cls="mb-1",
+        ))
+    return Div(
+        Div(
+            Div(
+                Span(f"#{index}", cls="text-xs font-bold text-gray-400 mr-2"),
+                Span(match.get("buyer","Unknown"), cls="font-semibold text-gray-800"),
+                Span(f" ({match.get('buyer_type','')})", cls="text-xs text-gray-500"),
+            ),
+            Div(
+                Span(str(match.get("composite_score",0)), cls="text-lg font-bold text-blue-700"),
+                Span(rec, cls=f"text-xs px-2 py-0.5 rounded-full font-medium {rec_cls} ml-2"),
+            ),
+            cls="flex items-center justify-between mb-2",
+        ),
+        P(match.get("rationale",""), cls="text-sm text-gray-600 mb-2"),
+        *dim_bars,
+        cls="bg-white rounded-lg p-4 border border-gray-200 mb-2",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Per-session state
+# ---------------------------------------------------------------------------
+class SessionState:
+    TTL = 7200
+    def __init__(self):
+        self.messages = []  # [{role, content_html}]
+        self.last_accessed = time.time()
+
+_sessions = {}
+
+def _get_ss(session) -> SessionState:
+    sid = session.get("sid")
+    if not sid:
+        sid = str(uuid.uuid4())
+        session["sid"] = sid
+    if sid not in _sessions:
+        _sessions[sid] = SessionState()
+    ss = _sessions[sid]
+    ss.last_accessed = time.time()
+    return ss
+
+
+# ---------------------------------------------------------------------------
+# Chat-first UI
+# ---------------------------------------------------------------------------
+def _user_bubble(text):
+    return Div(
+        Div(P(text, cls="text-sm"), cls="bg-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-2 max-w-xl"),
+        cls="flex justify-end mb-3",
+    )
+
+def _assistant_bubble(*children, label=""):
+    return Div(
+        Div(
+            P(label, cls="text-xs font-medium text-blue-600 mb-1") if label else "",
+            *children,
+            cls="bg-white rounded-2xl rounded-bl-sm px-4 py-3 max-w-2xl border border-gray-200 shadow-sm",
+        ),
+        cls="flex justify-start mb-3",
+    )
+
+def _thinking_indicator():
+    return Div(
+        Div(
+            Div(cls="w-2 h-2 bg-blue-400 rounded-full animate-bounce"),
+            Div(cls="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.1s]"),
+            Div(cls="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"),
+            cls="flex gap-1",
+        ),
+        cls="flex justify-start mb-3",
+        id="thinking",
+    )
+
+
+_THINKING_JS = """
+    var ca = document.getElementById('chat-area');
+    if (ca) {
+        var t = document.createElement('div');
+        t.id = 'thinking-live';
+        t.className = 'flex justify-start mb-3';
+        t.innerHTML = '<div class="bg-white rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200 shadow-sm"><div class="flex items-center gap-2"><div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay:0.1s"></div><div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay:0.2s"></div><span class="text-xs text-blue-600 ml-2">Thinking...</span></div></div>';
+        ca.appendChild(t);
+        ca.scrollTop = ca.scrollHeight;
+        var ws = document.getElementById('welcome-section'); if(ws) ws.remove();
+    }
+"""
+
+def _nav_page_link(label, href):
+    """Nav link that loads a static page into main-content."""
+    return A(
+        label,
+        hx_get=href,
+        hx_target="#main-content",
+        hx_push_url="true",
+        cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full block",
+    )
+
+def _nav_context_button(label, context_key):
+    """Nav button that loads context-specific cards into welcome section."""
+    return Button(
+        label,
+        hx_get=f"/cards/{context_key}",
+        hx_target="#welcome-section",
+        hx_swap="innerHTML",
+        cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full",
+    )
+
+def _nav_button(label, cmd, accent="gray"):
+    """Single nav button that posts to chat."""
+    return Button(
+        label,
+        hx_post="/chat",
+        hx_vals=json.dumps({"msg": cmd}),
+        hx_target="#chat-area",
+        hx_swap="beforeend",
+        hx_on__before_request=_THINKING_JS,
+        hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove(); var ca=document.getElementById('chat-area'); if(ca) ca.scrollTo({top:ca.scrollHeight, behavior:'smooth'});",
+        cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full",
+    )
+
+def _all_agents_nav_section():
+    """Collapsible browser of all 25 ECM Squad specialists, grouped by category.
+
+    Clicking an agent inserts its prefix into the chat input so the user can
+    complete the prompt. Mirrors pehero's agent_browser pattern.
+    """
+    from agents.registry import CATEGORIES, AGENTS_BY_CATEGORY
+    groups = []
+    for cat in CATEGORIES:
+        agents = AGENTS_BY_CATEGORY.get(cat["key"], [])
+        items = []
+        for a in agents:
+            items.append(Button(
+                Span(a.icon, cls="text-xs mr-2 text-amber-400"),
+                Span(a.name, cls="text-xs flex-1 truncate"),
+                Span(a.prefix, cls="text-[10px] font-mono text-gray-400 ml-1"),
+                type="button",
+                onclick=(
+                    f"var i=document.querySelector(\"input[name='msg']\"); "
+                    f"if(i){{i.value={a.prefix + ' '!r};i.focus();}}"
+                ),
+                title=a.one_liner,
+                cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1 rounded transition-colors w-full flex items-center",
+            ))
+        groups.append(Details(
+            Summary(
+                Span(cat["icon"], cls="text-xs text-amber-400 mr-2"),
+                Span(cat["name"], cls="text-xs font-semibold text-gray-600"),
+                Span(f"{len(agents)}", cls="text-[10px] text-gray-400 ml-auto font-mono"),
+                cls="px-3 py-1.5 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+            ),
+            Div(*items, cls="pl-2 border-l-2 border-amber-100 ml-3 mb-1"),
+            cls="mb-0.5",
+        ))
+    return Details(
+        Summary(
+            Span("ECM SQUAD · 25 AGENTS", cls="text-xs font-bold text-amber-500 uppercase tracking-wide"),
+            cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+        ),
+        Div(*groups, cls="pl-2 ml-2 mb-2"),
+        cls="mb-1",
+    )
+
+
+def _nav_section(session):
+    """Left navigation — grouped by buyer/seller workflow. Role-aware: the
+    active role's section renders first and stays open by default, with a
+    coloured accent border; the inactive role collapses."""
+    user = session.get("user")
+    active_role = session.get("role", "buyer")
+    buyer_open = active_role != "seller"
+    seller_open = active_role == "seller"
+
+    # Auth section
+    if user:
+        auth_section = Div(
+            Div(
+                Span(user.get("display_name", user.get("email","?"))[0].upper(), cls="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold"),
+                A(user.get("display_name", user.get("email","")), href="/profile", cls="text-xs text-gray-700 truncate hover:text-blue-600"),
+                cls="flex items-center gap-2",
+            ),
+            A("Sign out", href="/logout", cls="text-xs text-gray-400 hover:text-red-500"),
+            cls="flex items-center justify-between px-3 py-2 border-t border-gray-200",
+        )
+    else:
+        auth_section = Div(
+            A("Sign in", href="/signin", cls="text-xs text-blue-600 hover:underline"),
+            Span(" / ", cls="text-xs text-gray-400"),
+            A("Register", href="/register", cls="text-xs text-blue-600 hover:underline"),
+            cls="text-center px-3 py-2 border-t border-gray-200",
+        )
+
+    return Div(
+        # Restore button — visible only when nav is hidden
+        Button(
+            NotStr('<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>'),
+            id="nav-restore",
+            onclick="var np=document.getElementById('nav-panel'); np.classList.remove('-translate-x-full'); np.classList.add('mobile-open'); this.classList.add('hidden');",
+            cls="fixed top-3 left-3 z-30 bg-white border border-gray-200 rounded-lg p-2 shadow-sm hover:bg-blue-50 cursor-pointer hidden text-gray-500 hover:text-blue-600",
+        ),
+        # Collapsible nav panel
+        Div(
+            # Header with brand + close
+            Div(
+                Div(
+                    H2("LiquidRound", cls="text-sm font-bold text-blue-800"),
+                    Span("beta", cls="text-xs text-gray-400 ml-1"),
+                    cls="flex items-center",
+                ),
+                P("M&A Research Platform", cls="text-xs text-gray-400 mt-0.5"),
+                Button(
+                    NotStr('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'),
+                    onclick="var np=document.getElementById('nav-panel'); np.classList.add('-translate-x-full'); np.classList.remove('mobile-open'); document.getElementById('nav-restore').classList.remove('hidden');",
+                    cls="absolute top-3 right-3 text-gray-400 hover:text-gray-600 cursor-pointer",
+                ),
+                cls="px-3 py-3 border-b border-gray-200 relative",
+            ),
+            Div(
+                # New Chat button + Chat History (logged-in only)
+                *([
+                    A("+ New Chat", href="/conversation/new",
+                      cls="block text-center text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-2 mx-3 mb-2 transition-colors"),
+                    Details(
+                        Summary(
+                            Span("CHAT HISTORY", cls="text-xs font-bold text-gray-500 uppercase tracking-wide"),
+                            cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+                        ),
+                        Div(
+                            Input(name="q", placeholder="Search chats...",
+                                  hx_get="/conversations/search", hx_trigger="keyup changed delay:300ms",
+                                  hx_target="#chat-history",
+                                  cls="w-full text-xs border border-gray-200 rounded px-2 py-1 mb-2 focus:outline-none focus:ring-1 focus:ring-blue-400"),
+                            Div(id="chat-history", hx_get="/conversations", hx_trigger="load", hx_swap="innerHTML"),
+                            cls="px-1",
+                        ),
+                        open=True,
+                        cls="mb-2",
+                    ),
+                ] if user else []),
+                # I'M BUYING section (open if active role is buyer)
+                Details(
+                    Summary(
+                        Span("● ", cls="text-[10px] text-blue-600 mr-1") if buyer_open else "",
+                        Span("I'M BUYING", cls="text-xs font-bold text-blue-700 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-blue-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_context_button("Find Targets", "find-targets"),
+                        _nav_context_button("Company Profile", "company-profile"),
+                        _nav_context_button("Valuation Comp", "valuation-comp"),
+                        _nav_context_button("Score Match", "score-match"),
+                        *([ A("Target Pipeline", hx_get="/pipeline/target", hx_target="#main-content", hx_push_url="true",
+                              cls="text-left text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full block font-medium") ] if user else []),
+                        cls=("pl-2 border-l-2 ml-3 mb-2 " + ("border-blue-500" if buyer_open else "border-blue-100")),
+                    ),
+                    open=buyer_open,
+                    cls="mb-1",
+                ),
+                # I'M SELLING section (open if active role is seller)
+                Details(
+                    Summary(
+                        Span("● ", cls="text-[10px] text-green-600 mr-1") if seller_open else "",
+                        Span("I'M SELLING", cls="text-xs font-bold text-green-700 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-green-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_context_button("Find Buyers", "find-buyers"),
+                        _nav_context_button("Score Pitch Deck", "score-pitch-deck"),
+                        _nav_context_button("IPO Assessment", "ipo-assessment"),
+                        *([ A("Buyer Pipeline", hx_get="/pipeline/buyer", hx_target="#main-content", hx_push_url="true",
+                              cls="text-left text-xs text-green-600 hover:text-green-800 hover:bg-green-50 px-3 py-1.5 rounded transition-colors w-full block font-medium") ] if user else []),
+                        cls=("pl-2 border-l-2 ml-3 mb-2 " + ("border-green-500" if seller_open else "border-green-100")),
+                    ),
+                    open=seller_open,
+                    cls="mb-1",
+                ),
+                # ALL 25 SPECIALISTS section (collapsed) — full ECM Squad browser
+                _all_agents_nav_section(),
+                # RESEARCH section (collapsed)
+                Details(
+                    Summary(
+                        Span("RESEARCH", cls="text-xs font-bold text-gray-500 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_button("Deep Research", "research:Baltic M&A renewable energy"),
+                        _nav_button("Company News", "news:NOVO-B.CO"),
+                        _nav_button("Financials", "financials:SIE.DE"),
+                        _nav_button("Market Intel", "market"),
+                        cls="pl-2 border-l-2 border-gray-200 ml-3 mb-2",
+                    ),
+                    cls="mb-1",
+                ),
+                # PUBLIC MARKETS section (collapsed)
+                Details(
+                    Summary(
+                        Span("PUBLIC MARKETS", cls="text-xs font-bold text-gray-500 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_page_link("IPO Map", "/app/ipo-map"),
+                        _nav_page_link("IPO Pipeline", "/app/ipo-pipeline"),
+                        _nav_page_link("Prospectus", "/app/prospectus"),
+                        cls="pl-2 border-l-2 border-gray-200 ml-3 mb-2",
+                    ),
+                    cls="mb-1",
+                ),
+                # HEDGE FUNDS section (collapsed)
+                Details(
+                    Summary(
+                        Span("HEDGE FUNDS", cls="text-xs font-bold text-gray-500 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_page_link("Fund Treemap", "/app/hedgefunds"),
+                        _nav_button("Top Holdings", "hedgefunds: top funds by AUM"),
+                        _nav_button("Popular Securities", "hedgefunds: most popular securities across all funds"),
+                        _nav_button("Activist Filings", "hedgefunds: recent activist filings"),
+                        cls="pl-2 border-l-2 border-gray-200 ml-3 mb-2",
+                    ),
+                    cls="mb-1",
+                ),
+                # WORKSPACE section (collapsed)
+                Details(
+                    Summary(
+                        Span("WORKSPACE", cls="text-xs font-bold text-gray-500 uppercase tracking-wide"),
+                        cls="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded list-none flex items-center nav-section-header",
+                    ),
+                    Div(
+                        _nav_page_link("Documents", "/page/documents"),
+                        _nav_page_link("Deal History", "/page/deals"),
+                        _nav_page_link("M&A Tools", "/page/tools"),
+                        A("Skills",
+                          href="/app/skills",
+                          cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full block"),
+                        A("Daily Digest",
+                          href="/app/digest",
+                          cls="text-left text-xs text-gray-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors w-full block"),
+                        cls="pl-2 border-l-2 border-gray-200 ml-3 mb-2",
+                    ),
+                    cls="mb-1",
+                ),
+                # Bottom utility links
+                Div(
+                    _nav_button("Settings", "settings"),
+                    _nav_button("Help", "help"),
+                    cls="mt-2 pt-2 border-t border-gray-100",
+                ),
+                cls="flex-1 overflow-y-auto py-2",
+            ),
+            auth_section,
+            Div(P("Predictive Labs Ltd", cls="text-xs text-gray-300 text-center py-1")),
+            id="nav-panel",
+            cls="fixed left-0 top-0 h-screen w-56 bg-white border-r border-gray-200 z-20 flex flex-col shadow-lg transition-transform duration-300",
+        ),
+    )
+
+
+def _action_card(label, subtitle, cmd, color="blue"):
+    """Single action card that posts to chat."""
+    border = f"border-{color}-100 hover:border-{color}-400"
+    label_cls = f"text-{color}-700"
+    return Div(
+        H3(label, cls=f"font-medium text-gray-800 text-sm"),
+        P(subtitle, cls="text-xs text-gray-500 mt-1"),
+        hx_post="/chat",
+        hx_vals=json.dumps({"msg": cmd}),
+        hx_target="#chat-area",
+        hx_swap="beforeend",
+        hx_on__before_request=_THINKING_JS,
+        hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+        cls=f"bg-white border-2 {border} rounded-xl p-4 cursor-pointer transition-colors",
+    )
+
+# Context card definitions: 3 cards per nav context
+_CONTEXT_CARDS = {
+    "default": {
+        "title": "Quick Start",
+        "subtitle": "Choose an action to begin",
+        "cards": [
+            ("Find Acquisition Targets", "Search by industry, size, geography", "targets industry:renewable energy", "blue"),
+            ("Score a Deal", "Evaluate buyer-target synergy", "score buyer:Siemens target:Harju Elekter", "purple"),
+            ("Analyze a Pitch Deck", "Extract key terms from documents", "docs", "green"),
+        ],
+    },
+    "find-targets": {
+        "title": "Find Acquisition Targets",
+        "subtitle": "Search for companies to acquire",
+        "cards": [
+            ("Renewable Energy - Nordics", "Wind, solar, hydrogen in Baltic/Nordic region", "targets industry:renewable energy geography:Nordics", "blue"),
+            ("Fintech - Europe", "Payments, lending, insurance tech", "targets industry:fintech geography:Europe", "indigo"),
+            ("Healthcare SaaS - US", "Digital health, clinical software", "targets industry:healthcare SaaS geography:US", "green"),
+        ],
+    },
+    "company-profile": {
+        "title": "Company Profile",
+        "subtitle": "Look up a company by ticker",
+        "cards": [
+            ("SAP SE", "Enterprise software, Germany", "profile:SAP.DE", "blue"),
+            ("Novo Nordisk", "Pharma, Denmark", "profile:NOVO-B.CO", "green"),
+            ("Siemens", "Industrial tech, Germany", "profile:SIE.DE", "indigo"),
+        ],
+    },
+    "valuation-comp": {
+        "title": "Valuation Comparison",
+        "subtitle": "Compare multiples across companies",
+        "cards": [
+            ("Baltic Energy", "TAL1T, EQNR, NESTE", "valuation:TAL1T.TL,EQNR.OL,NESTE.HE", "blue"),
+            ("Nordic Tech", "NOVO-B, SIE, SAP", "valuation:NOVO-B.CO,SIE.DE,SAP.DE", "indigo"),
+            ("EU Financials", "ING, SAN, BNP", "valuation:INGA.AS,SAN.PA,BNP.PA", "green"),
+        ],
+    },
+    "score-match": {
+        "title": "Score M&A Match",
+        "subtitle": "Evaluate buyer-target compatibility",
+        "cards": [
+            ("Siemens + Harju Elekter", "Industrial automation synergy", "score buyer:Siemens target:Harju Elekter", "blue"),
+            ("SAP + NovaTech", "Supply chain SaaS acquisition", "score buyer:SAP target:NovaTech Solutions", "indigo"),
+            ("Upload & Score", "Score a document against buyers", "docs", "green"),
+        ],
+    },
+    "find-buyers": {
+        "title": "Find Buyers",
+        "subtitle": "Identify strategic and financial buyers",
+        "cards": [
+            ("SaaS Company (EUR 15M)", "B2B software with recurring revenue", "buyers company:B2B SaaS revenue:15M", "green"),
+            ("Manufacturing (EUR 50M)", "Industrial manufacturer seeking exit", "buyers company:Manufacturing revenue:50M", "blue"),
+            ("Tech Platform", "Digital marketplace platform", "buyers company:Tech Platform revenue:10M", "indigo"),
+        ],
+    },
+    "score-pitch-deck": {
+        "title": "Score Pitch Deck",
+        "subtitle": "Extract key terms and find buyers",
+        "cards": [
+            ("NovaTech Pitch Deck", "10-page investment presentation", "keyterms NovaTech-Pitch-Deck.pdf", "blue"),
+            ("NovaTech Term Sheet", "Draft acquisition terms", "keyterms NovaTech-TermSheet-Draft.pdf", "green"),
+            ("Upload New Document", "Analyze your own pitch deck", "docs", "indigo"),
+        ],
+    },
+    "ipo-assessment": {
+        "title": "IPO Readiness",
+        "subtitle": "Assess public offering readiness",
+        "cards": [
+            ("Ignitis Group", "Baltic energy utility", "ipo company:Ignitis industry:Energy", "blue"),
+            ("Baltic Tech Co", "SaaS platform IPO candidate", "ipo company:Baltic Tech industry:SaaS", "green"),
+            ("Nordic Fintech", "Payments company IPO", "ipo company:Nordic Payments industry:Fintech", "indigo"),
+        ],
+    },
+}
+
+
+def _render_context_cards(context_key: str):
+    """Render 3 context-sensitive action cards."""
+    ctx = _CONTEXT_CARDS.get(context_key, _CONTEXT_CARDS["default"])
+    cards = [_action_card(label, sub, cmd, color) for label, sub, cmd, color in ctx["cards"]]
+    return Div(
+        Div(
+            H2(ctx["title"], cls="text-lg font-bold text-gray-800"),
+            P(ctx["subtitle"], cls="text-sm text-gray-500 mt-0.5"),
+            cls="text-center mb-4",
+        ),
+        Div(*cards, cls="grid grid-cols-3 gap-3 max-w-2xl mx-auto"),
+    )
+
+
+def _contextual_chips(context_type: str, data: dict = {}):
+    """Context-aware suggestion chips, returned via OOB swap."""
+    chip_sets = {
+        "buyer_welcome": [
+            ("Find energy targets in Nordics", "targets industry:renewable energy geography:Nordics"),
+            ("Profile SAP.DE", "profile:SAP.DE"),
+            ("Baltic valuation comp", "valuation:TAL1T.TL,EQNR.OL,NESTE.HE"),
+            ("Score: Siemens + Harju Elekter", "score buyer:Siemens target:Harju Elekter"),
+        ],
+        "seller_welcome": [
+            ("Find buyers for SaaS company", "buyers company:SaaS revenue:15M"),
+            ("View NovaTech pitch deck", "docs"),
+            ("IPO readiness: Ignitis", "ipo company:Ignitis"),
+            ("Score NovaTech pitch deck", "score doc:NovaTech-Pitch-Deck.pdf"),
+        ],
+        "post_profile": [
+            (f"Financials for {data.get('ticker','')}", f"financials:{data.get('ticker','')}"),
+            (f"News about {data.get('ticker','')}", f"news:{data.get('ticker','')}"),
+            (f"Find targets in {data.get('industry','this sector')}", f"targets industry:{data.get('industry','')}"),
+            (f"Score as buyer", f"score buyer:{data.get('name','')} target:"),
+        ],
+        "post_score": [
+            ("Deep research", f"research:{data.get('target','')} M&A"),
+            ("View documents", "docs"),
+            ("Deal history", "deals"),
+            ("Help", "help"),
+        ],
+        "post_targets": [
+            ("Score top match", f"score buyer: target:{data.get('first_target','')}"),
+            ("Deep research", f"research:{data.get('industry','')} M&A targets"),
+            ("Market intel", "market"),
+            ("Valuation comp", f"valuation:{data.get('tickers','')}"),
+        ],
+        "post_research": [
+            ("Find targets", "targets industry:"),
+            ("Find buyers", "buyers company:"),
+            ("Score match", "score buyer: target:"),
+            ("Market intel", "market"),
+        ],
+        "default": [
+            ("Find targets", "targets industry:renewable energy"),
+            ("Find buyers", "buyers company:Enefit Green"),
+            ("Company profile", "profile:SAP.DE"),
+            ("Help", "help"),
+        ],
+    }
+    pills = chip_sets.get(context_type, chip_sets["default"])
+    return Div(
+        *[Button(
+            label,
+            hx_post="/chat",
+            hx_vals=json.dumps({"msg": cmd}),
+            hx_target="#chat-area",
+            hx_swap="beforeend",
+            hx_on__before_request=_THINKING_JS,
+            hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+            cls="text-xs bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full hover:border-blue-400 hover:text-blue-700 transition-colors",
+        ) for label, cmd in pills],
+        id="suggestion-chips",
+        hx_swap_oob="true",
+        cls="flex flex-wrap gap-2 justify-center mb-4",
+    )
+
+
+def _canvas_tab(label, tab_id, endpoint, active=False):
+    """Single canvas tab button."""
+    active_cls = "border-b-2 border-blue-600 text-blue-700 font-medium" if active else "text-gray-500 hover:text-gray-700"
+    return Button(
+        label,
+        hx_get=endpoint,
+        hx_target="#canvas-content",
+        onclick=f"document.querySelectorAll('.canvas-tab').forEach(t=>t.className=t.className.replace(/border-b-2 border-blue-600 text-blue-700 font-medium/g,'text-gray-500 hover:text-gray-700')); this.className=this.className.replace('text-gray-500 hover:text-gray-700','border-b-2 border-blue-600 text-blue-700 font-medium');",
+        cls=f"canvas-tab text-xs px-3 py-2 {active_cls}",
+        id=f"tab-{tab_id}",
+    )
+
+def _right_pane():
+    """Right pane — dynamic canvas with tabs: Documents, Research, Scores, Compare."""
+    return Div(
+        # Header
+        Div(
+            Div(
+                H2("Canvas", cls="text-sm font-semibold text-gray-800", id="canvas-title"),
+                Button(
+                    "X", cls="text-gray-400 hover:text-gray-600 text-xs font-bold",
+                    onclick="document.getElementById('right-pane').classList.add('translate-x-full')",
+                ),
+                cls="flex items-center justify-between",
+            ),
+            cls="px-3 py-2 border-b border-gray-200",
+        ),
+        # Tab bar
+        Div(
+            _canvas_tab("Documents", "docs", "/canvas/docs", active=True),
+            _canvas_tab("Research", "research", "/canvas/research"),
+            _canvas_tab("Scores", "scores", "/canvas/scores"),
+            _canvas_tab("Compare", "compare", "/canvas/compare"),
+            cls="flex border-b border-gray-200",
+            id="canvas-tabs",
+        ),
+        # Content area
+        Div(
+            _doc_list_for_pane(),
+            id="canvas-content",
+            cls="flex-1 overflow-y-auto",
+        ),
+        id="right-pane",
+        cls="fixed right-0 top-0 h-screen w-[440px] bg-white border-l border-gray-200 flex flex-col transition-transform duration-300 translate-x-full z-20 shadow-lg",
+    )
+
+
+@rt("/app")
+def app_shell(session, role: str = "", sid: str = ""):
+    """3-pane chat app shell — pehero-faithful (Sessions / Agents / Workspace /
+    Configuration). Dark navy palette matching the landing. SSE streaming
+    via /app/chat."""
+    from components.chat_shell import left_pane, center_pane, right_pane
+
+    # Persist role from query param (from landing CTAs) into session
+    if role in ("buyer", "seller", "both"):
+        session["role"] = role
+    active_role = session.get("role", "buyer")
+    current_currency = session.get("currency", "EUR")
+
+    # Load sessions for left pane (logged-in users only)
+    user = session.get("user")
+    sessions_list = []
+    if user and user.get("user_id"):
+        try:
+            from utils.database import db_service
+            convs = db_service.get_user_conversations(user["user_id"], limit=20) or []
+            sessions_list = [{"id": c["id"], "title": c.get("conversation_title") or c.get("user_query", "Untitled")}
+                             for c in convs]
+        except Exception:
+            pass
+
+    # Load messages for the active session (sid=... from URL)
+    messages = []
+    if user and sid:
+        try:
+            from utils.database import db_service
+            conv_msgs = db_service.get_user_messages(sid, user["user_id"]) or []
+            if not conv_msgs and not db_service.conversation_belongs_to_user(sid, user["user_id"]):
+                sid = ""
+                raise PermissionError("Conversation does not belong to user")
+            messages = [{"role": m["role"], "content": m["content"]} for m in conv_msgs]
+            session["recent_user_messages"] = [
+                str(m["content"])[:240] for m in conv_msgs
+                if m.get("role") == "user" and m.get("content")
+            ][-5:]
+            session["conversation_id"] = sid
+        except Exception:
+            pass
+
+    user_email = user.get("email") if user else None
+
+    return (
+        Title("LiquidRound — AI ECM Agent Squad"),
+        # Mount a hidden sign-in overlay so the "Sign in" button can open it
+        Div(cls="left-overlay", id="left-overlay", onclick="toggleLeftPane()"),
+        Div(
+            left_pane(
+                user_email=user_email,
+                sessions=sessions_list,
+                current_sid=sid,
+                current_currency=current_currency,
+                current_role=active_role,
+            ),
+            center_pane(
+                messages=messages,
+                current_agent_slug=None,
+                current_role=active_role,
+            ),
+            right_pane(open_by_default=True),
+            cls="app",
+        ),
+        Script(src="/chat.js?v=4"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Chat endpoint — processes commands and free-form chat
+# ---------------------------------------------------------------------------
+def _determine_context(msg: str, result_components: list) -> tuple:
+    """Determine chip context type and data from the command and results."""
+    from utils.command_parser import parse_command
+    cmd, subject, params = parse_command(msg)
+
+    # Detect buyer/seller intent from natural language
+    msg_lower = msg.lower()
+    if cmd is None:
+        if any(w in msg_lower for w in ["acquire", "buy", "acquisition", "target"]):
+            return "buyer_welcome", {}
+        if any(w in msg_lower for w in ["sell", "exit", "raise capital", "buyer"]):
+            return "seller_welcome", {}
+
+    if cmd == "profile":
+        return "post_profile", {"ticker": subject, "name": subject, "industry": ""}
+    if cmd == "score":
+        return "post_score", {"target": params.get("target", subject)}
+    if cmd in ("targets", "buyers"):
+        return "post_targets", {"industry": params.get("industry", subject), "first_target": "", "tickers": ""}
+    if cmd == "research":
+        return "post_research", {}
+    if cmd == "docs":
+        return "seller_welcome", {}
+    return "default", {}
+
+
+# ---------------------------------------------------------------------------
+# Context cards route
+# ---------------------------------------------------------------------------
+@rt("/cards/{context_key}")
+def context_cards(context_key: str = "default"):
+    """Return 3 context-sensitive action cards."""
+    return _render_context_cards(context_key)
+
+
+@rt("/app/config", methods=["POST"])
+async def app_config(session, request):
+    """Persist session-level chat preferences (currency for now)."""
+    form = await request.form()
+    currency = (form.get("currency") or "").upper()
+    if currency in ("EUR", "GBP", "USD"):
+        session["currency"] = currency
+    return {"ok": True, "currency": session.get("currency", "EUR")}
+
+
+@rt("/app/chat", methods=["POST"])
+async def app_chat_sse(request, session):
+    """SSE streaming chat — routes to one of the 32 ECM Squad specialists.
+
+    Event stream format (pehero-compatible):
+      event: agent_route  → {slug, agent, icon}
+      event: token        → {text}        — incremental LLM chunks
+      event: tool_start   → {name, args}
+      event: tool_end     → {name, output}
+      event: artifact_show→ {kind, title, ...}
+      event: session      → {sid}         — new conversation ID
+      event: done         → {slug, tools}
+      event: error        → {message}
+    """
+    from starlette.responses import StreamingResponse
+    from langchain_core.messages import HumanMessage
+    from agents.base import cached_agent
+    from agents.registry import by_slug
+    from agents.router import contextualize_user_query, decide_route, strip_prefix
+    from tools.artifact import is_artifact, parse_artifact, ARTIFACT_PREFIX
+    from utils.config import config as runtime_config
+    import chat_sse as sse
+
+    form = await request.form()
+    user_msg = (form.get("msg") or "").strip()
+    if not user_msg:
+        return Response("empty message", status_code=400)
+
+    # Persist user message & create conversation if needed
+    user = session.get("user")
+    conv_id = session.get("conversation_id") if user else None
+    new_conv = False
+    if user and not conv_id:
+        try:
+            from utils.database import db_service
+            conv_id = db_service.create_conversation(user["user_id"], user_msg[:200])
+            session["conversation_id"] = conv_id
+            new_conv = True
+        except Exception:
+            conv_id = None
+    if conv_id:
+        try:
+            from utils.database import db_service
+            db_service.add_message(conv_id, "user", user_msg)
+            db_service.update_conversation_timestamp(conv_id)
+        except Exception:
+            pass
+
+    previous_user_messages = [
+        str(item)[:240] for item in session.get("recent_user_messages", [])
+        if str(item).strip()
+    ][-5:]
+    route_decision = decide_route(
+        user_msg,
+        previous_user_messages=previous_user_messages,
+        active_slug=session.get("last_agent_slug"),
+    )
+    slug = route_decision.slug
+    session["mandate"] = route_decision.extracted_entities or session.get("mandate", {})
+    session["last_agent_slug"] = slug
+    session["recent_user_messages"] = [*previous_user_messages, user_msg[:240]][-5:]
+    spec = by_slug(slug)
+    stripped = strip_prefix(user_msg)
+    contextual_query = contextualize_user_query(stripped, previous_user_messages)
+    run_id = None
+    if user:
+        try:
+            import hashlib
+            from agents.base import load_system_prompt
+            from utils.config import config as _config
+            prompt_version = hashlib.sha256(
+                load_system_prompt(slug, user_id=user.get("user_id")).encode("utf-8")
+            ).hexdigest()[:12]
+            from utils.database import db_service
+            run_id = db_service.create_agent_run(
+                workflow_id=conv_id,
+                user_id=user.get("user_id"),
+                agent_slug=slug,
+                router_payload=route_decision.to_dict(),
+                prompt_version=prompt_version,
+                model_provider=_config.default_provider,
+                model_name=_config.default_model,
+            )
+        except Exception:
+            run_id = None
+
+    async def event_stream():
+        from utils.request_context import set_current_user_id, reset_current_user_id
+        context_token = set_current_user_id(user.get("user_id") if user else None)
+        # Push conversation ID to client so Share button works
+        if new_conv and conv_id:
+            yield sse.event(sse.SESSION, {"sid": str(conv_id)})
+
+        yield sse.event(sse.AGENT_ROUTE, {
+            "slug": slug,
+            "agent": spec.name if spec else slug,
+            "icon": spec.icon if spec else "◆",
+        })
+
+        tool_calls = 0
+        tool_trace = []
+        artifact_trace = []
+        accumulated = ""
+        run_error = None
+        run_started = time.monotonic()
+        try:
+            try:
+                agent = cached_agent(slug)
+            except Exception as e:  # noqa: BLE001
+                run_error = type(e).__name__
+                log.exception("agent build failed for %s", slug)
+                yield sse.event(
+                    sse.ERROR,
+                    {"message": "The agent could not be initialized."},
+                )
+                yield sse.event(sse.DONE, {"slug": slug, "tools": 0})
+                return
+
+            # LangGraph app path
+            if hasattr(agent, "astream_events"):
+              try:
+                async with asyncio.timeout(runtime_config.agent_timeout_seconds):
+                    async for ev in agent.astream_events(
+                        {"messages": [HumanMessage(content=contextual_query)]},
+                        version="v2",
+                        config={"recursion_limit": runtime_config.agent_recursion_limit},
+                    ):
+                        kind = ev["event"]
+                        if kind == "on_chat_model_stream":
+                            chunk = ev["data"].get("chunk")
+                            text = getattr(chunk, "content", None) if chunk else None
+                            if isinstance(text, str) and text:
+                                accumulated += text
+                                yield sse.event(sse.TOKEN, {"text": text})
+                        elif kind == "on_tool_start":
+                            tool_calls += 1
+                            if tool_calls > runtime_config.agent_max_tool_calls:
+                                raise RuntimeError("agent tool-call budget exceeded")
+                            tool_trace.append({
+                                "name": ev.get("name", "?"),
+                                "args": ev["data"].get("input", {}),
+                            })
+                            yield sse.event(sse.TOOL_START, {
+                                "name": ev.get("name", "?"),
+                                "args": ev["data"].get("input", {}),
+                            })
+                        elif kind == "on_tool_end":
+                            raw = ev["data"].get("output", "")
+                            output = getattr(raw, "content", None) or (
+                                raw if isinstance(raw, str) else str(raw)
+                            )
+                            yield sse.event(sse.TOOL_END, {
+                                "name": ev.get("name", "?"),
+                                "output": (output or "")[:2000],
+                            })
+                            if isinstance(output, str) and output.startswith(ARTIFACT_PREFIX):
+                                try:
+                                    artifact = parse_artifact(output)
+                                    artifact_trace.append(artifact)
+                                    yield sse.event(sse.ARTIFACT, artifact)
+                                except Exception:
+                                    pass
+              except TimeoutError:
+                accumulated = "The agent timed out before completing this request."
+                run_error = "AgentTimeout"
+                yield sse.event(sse.ERROR, {"message": accumulated})
+              except Exception as e:  # noqa: BLE001
+                run_error = type(e).__name__
+                log.exception("agent run failed for %s", slug)
+                accumulated = "The agent could not complete this request."
+                yield sse.event(sse.ERROR, {"message": accumulated})
+            else:
+              # Simple-LLM callable fallback
+              try:
+                text = agent(contextual_query) if callable(agent) else str(agent)
+                accumulated = text
+                yield sse.event(sse.TOKEN, {"text": text})
+              except Exception as e:  # noqa: BLE001
+                run_error = type(e).__name__
+                log.exception("fallback agent run failed for %s", slug)
+                accumulated = "The agent could not complete this request."
+                yield sse.event(sse.ERROR, {"message": accumulated})
+
+            # Persist assistant response
+            if conv_id and accumulated:
+                try:
+                    from utils.database import db_service as _dbs
+                    _dbs.add_message(conv_id, "assistant", accumulated[:10000])
+                except Exception:
+                    pass
+
+            yield sse.event(sse.DONE, {"slug": slug, "tools": tool_calls})
+        finally:
+            if run_id:
+                try:
+                    from utils.database import db_service as _dbs
+                    _dbs.complete_agent_run(
+                        run_id,
+                        status="failed" if run_error else "completed",
+                        latency_ms=int((time.monotonic() - run_started) * 1000),
+                        tool_calls=tool_trace,
+                        artifacts=artifact_trace,
+                        error_code=run_error,
+                    )
+                except Exception:
+                    pass
+            reset_current_user_id(context_token)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# ---------------------------------------------------------------------------
+# Copilot session route (for workspace pages with copilot pane)
+# ---------------------------------------------------------------------------
+@rt("/app/copilot/session")
+def copilot_session(session, page: str = "", company: str = ""):
+    """Return (or create) a per-page copilot chat session."""
+    user = session.get("user")
+    if not user or not user.get("user_id"):
+        import uuid as _uuid
+        return JSONResponse({"sid": str(_uuid.uuid4()), "messages": []})
+    uid = user["user_id"]
+    title = f"Copilot: {page}" if not company else f"Copilot: {page}: {company}"
+    try:
+        from utils.database import get_conn, db_service
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id FROM liquidround.workflows WHERE user_id = %s AND user_query = %s "
+                "ORDER BY created_at DESC LIMIT 1",
+                (uid, title),
+            )
+            row = cur.fetchone()
+            if row:
+                sid = row[0] if isinstance(row, (list, tuple)) else row.get("id", row[0])
+                return JSONResponse({"sid": str(sid), "messages": []})
+            # Create a new copilot session
+            conv_id = db_service.create_conversation(uid, title)
+            return JSONResponse({"sid": str(conv_id), "messages": []})
+    except Exception:
+        import uuid as _uuid
+        return JSONResponse({"sid": str(_uuid.uuid4()), "messages": []})
+
+
+# ---------------------------------------------------------------------------
+# Share chat session
+# ---------------------------------------------------------------------------
+@rt("/app/share", methods=["POST"])
+async def share_session(session, request):
+    """Generate a shareable link for a chat session."""
+    form = await request.form()
+    sid = form.get("sid") or ""
+    user = session.get("user")
+    if not user or not sid:
+        return JSONResponse({"ok": False, "error": "not authenticated"}, status_code=401)
+    uid = user.get("user_id")
+    try:
+        from utils.database import get_conn
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, share_token FROM liquidround.workflows WHERE id = %s AND user_id = %s",
+                (sid, uid),
+            )
+            row = cur.fetchone()
+            if not row:
+                return JSONResponse({"ok": False, "error": "session not found"}, status_code=404)
+            token = row[1] if isinstance(row, (list, tuple)) else row.get("share_token")
+            if not token:
+                token = uuid.uuid4().hex
+                cur.execute(
+                    "UPDATE liquidround.workflows SET share_token = %s WHERE id = %s",
+                    (token, sid),
+                )
+                conn.commit()
+        url = f"/app/s/{token}"
+        return JSONResponse({"ok": True, "token": token, "url": url})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@rt("/app/s/{token}")
+def shared_chat(token: str):
+    """View a shared chat session (read-only, no auth required)."""
+    from utils.database import get_conn, db_service
+    from components.chat_shell import center_pane
+    try:
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, conversation_title FROM liquidround.workflows WHERE share_token = %s",
+                (token,),
+            )
+            row = cur.fetchone()
+        if not row:
+            return Title("Not found"), Div(
+                P("This shared chat link is invalid or has expired.",
+                  style="text-align:center;padding:4rem;color:var(--ink-muted);"),
+            )
+        wf_id = row[0] if isinstance(row, (list, tuple)) else row.get("id")
+        title = row[1] if isinstance(row, (list, tuple)) else row.get("conversation_title", "")
+        messages = db_service.get_messages(str(wf_id)) or []
+        msg_list = [{"role": m["role"], "content": m["content"]} for m in messages]
+    except Exception:
+        msg_list = []
+        title = ""
+    return (
+        Title(f"Shared: {title or 'Chat'} · LiquidRound"),
+        Div(
+            center_pane(messages=msg_list, current_agent_slug=None,
+                        current_role="buyer", readonly=True),
+            cls="app shared-view",
+        ),
+        Script("""
+            window.copyChat = function() {
+                var msgs = document.querySelectorAll(".msg");
+                var lines = [];
+                msgs.forEach(function(m) {
+                    var role = m.classList.contains("msg-user") ? "You" : "LiquidRound";
+                    var bubble = m.querySelector(".msg-bubble");
+                    if (bubble) lines.push(role + ": " + bubble.textContent.trim());
+                });
+                navigator.clipboard.writeText(lines.join("\\n\\n")).then(function() {
+                    var btn = document.getElementById("copy-chat-btn");
+                    if (btn) { btn.textContent = "Copied!"; setTimeout(function() { btn.textContent = "Copy"; }, 1500); }
+                });
+            };
+        """),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Company card export (CSV + PDF)
+# ---------------------------------------------------------------------------
+@rt("/app/company/{slug}/csv")
+def company_csv(slug: str):
+    """Download company data as CSV."""
+    import csv as _csv
+    import io
+    db_schema = os.getenv("COMPANY_DB_SCHEMA", "pehero")
+    from utils.database import get_conn
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM {db_schema}.companies WHERE slug = %s", (slug,))
+        cols = [desc[0] for desc in cur.description]
+        row = cur.fetchone()
+    if not row:
+        return Response("Not found", status_code=404)
+    data = dict(zip(cols, row))
+    buf = io.StringIO()
+    writer = _csv.DictWriter(buf, fieldnames=cols)
+    writer.writeheader()
+    writer.writerow(data)
+    content = buf.getvalue()
+    safe_slug = re.sub(r"[^\w-]", "", slug)[:40] or "company"
+    return Response(
+        content=content.encode(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="liquidround-{safe_slug}.csv"'},
+    )
+
+
+@rt("/app/company/{slug}/pdf")
+def company_pdf(slug: str):
+    """Download company card as PDF."""
+    db_schema = os.getenv("COMPANY_DB_SCHEMA", "pehero")
+    from utils.database import get_conn
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM {db_schema}.companies WHERE slug = %s", (slug,))
+        cols = [desc[0] for desc in cur.description]
+        row = cur.fetchone()
+    if not row:
+        return Response("Not found", status_code=404)
+    co = dict(zip(cols, row))
+
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table as RLTable, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.colors import HexColor
+    import io
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=20*mm, bottomMargin=15*mm,
+                            leftMargin=20*mm, rightMargin=20*mm)
+    styles = getSampleStyleSheet()
+    navy = HexColor("#0B1220")
+    amber = HexColor("#F59E0B")
+
+    title_style = ParagraphStyle("LRTitle", parent=styles["Heading1"],
+                                  textColor=navy, fontSize=18, spaceAfter=6)
+    sub_style = ParagraphStyle("LRSub", parent=styles["Normal"],
+                                textColor=HexColor("#64748B"), fontSize=9)
+    kv_style = ParagraphStyle("LRKV", parent=styles["Normal"], fontSize=10, leading=14)
+
+    story = []
+    name = co.get("name", slug)
+    story.append(Paragraph(name, title_style))
+    sector = (co.get("sector") or "").replace("_", " ").title()
+    sub_sector = (co.get("sub_sector") or "").replace("_", " ").title()
+    story.append(Paragraph(f"{sector} · {sub_sector} · {co.get('deal_stage', '')}", sub_style))
+    story.append(Spacer(1, 8*mm))
+
+    def _fmt(v):
+        if v is None:
+            return "—"
+        try:
+            n = float(v)
+            if abs(n) >= 1e9:
+                return f"€{n/1e9:.1f}B"
+            if abs(n) >= 1e6:
+                return f"€{n/1e6:.1f}M"
+            if abs(n) >= 1e3:
+                return f"€{n/1e3:.0f}K"
+            return f"{n:,.0f}"
+        except (ValueError, TypeError):
+            return str(v)
+
+    kv_data = [
+        ["HQ", f"{co.get('hq_city', '—')}, {co.get('country', '—')}"],
+        ["Founded", str(co.get("founded_year") or "—")],
+        ["Employees", _fmt(co.get("employees"))],
+        ["Revenue LTM", _fmt(co.get("revenue_ltm"))],
+        ["EBITDA LTM", _fmt(co.get("ebitda_ltm"))],
+        ["Enterprise Value", _fmt(co.get("enterprise_value"))],
+        ["Growth Rate", f"{float(co['growth_rate']):+.1f}%" if co.get("growth_rate") else "—"],
+        ["Ownership", (co.get("ownership") or "—").replace("_", " ").title()],
+    ]
+    table = RLTable(kv_data, colWidths=[120, 300])
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("TEXTCOLOR", (0, 0), (0, -1), HexColor("#64748B")),
+        ("TEXTCOLOR", (1, 0), (1, -1), navy),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.5, HexColor("#E5E7EB")),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 6*mm))
+
+    desc = co.get("description") or co.get("business_description") or ""
+    if desc:
+        story.append(Paragraph("Description", ParagraphStyle("H3", parent=styles["Heading3"],
+                                                              textColor=HexColor("#64748B"), fontSize=11)))
+        story.append(Paragraph(desc, kv_style))
+
+    story.append(Spacer(1, 10*mm))
+    story.append(Paragraph("Generated by LiquidRound · Predictive Labs Ltd", sub_style))
+
+    doc.build(story)
+    buf.seek(0)
+    safe = re.sub(r"[^\w-]", "", slug)[:40] or "company"
+    return Response(
+        content=buf.read(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="liquidround-{safe}.pdf"'},
+    )
+
+
+@rt("/settings/save", methods=["POST"])
+def settings_save(session, role: str = ""):
+    """Persist role to session (and to users.default_role when logged in, best-effort)."""
+    if role in ("buyer", "seller", "both"):
+        session["role"] = role
+        user = session.get("user")
+        if user and user.get("user_id"):
+            try:
+                from utils.database import get_conn
+                with get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "UPDATE liquidround.users SET default_role=%s, updated_at=NOW() WHERE user_id=%s",
+                            (role, user["user_id"]),
+                        )
+                    conn.commit()
+            except Exception:
+                pass  # column may not exist yet; session still persists
+    return Span(
+        NotStr('<span class="text-green-600">●</span> '),
+        f"Saved — default view set to {role.title()}.",
+        cls="text-xs text-gray-700",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Static workspace pages (not chat)
+# ---------------------------------------------------------------------------
+@rt("/page/documents")
+def page_documents():
+    """Static document manager page."""
+    files = []
+    for folder in DOC_FOLDERS:
+        if folder.exists():
+            for f in sorted(folder.iterdir()):
+                if f.is_file() and f.suffix.lower() in (".pdf", ".xlsx", ".xls", ".pptx", ".ppt"):
+                    files.append((f.name, f.suffix.lower(), f"{f.stat().st_size / 1024 / 1024:.1f} MB", str(folder)))
+    rows = []
+    for fname, ext, size, folder_name in files:
+        badge_cls = {".pdf": "bg-red-100 text-red-700", ".xlsx": "bg-green-100 text-green-700", ".pptx": "bg-orange-100 text-orange-700"}.get(ext, "bg-gray-100 text-gray-600")
+        rows.append(Tr(
+            Td(Span(ext[1:].upper(), cls=f"text-xs font-bold px-1.5 py-0.5 rounded {badge_cls}")),
+            Td(Span(fname, cls="text-sm text-gray-800")),
+            Td(Span(size, cls="text-xs text-gray-400")),
+            Td(
+                Button("View", hx_get=f"/doc/panel?fn={fname}", hx_target="#canvas-content",
+                       onclick="document.getElementById('right-pane').classList.remove('translate-x-full');",
+                       cls="text-xs text-blue-600 hover:underline mr-3"),
+                Button("Key Terms", hx_post="/chat", hx_vals=json.dumps({"msg": f"keyterms {fname}"}),
+                       hx_target="#chat-area", hx_swap="beforeend",
+                       hx_on__before_request=_THINKING_JS,
+                       hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+                       cls="text-xs text-purple-600 hover:underline mr-3"),
+                Button("Score", hx_post="/chat", hx_vals=json.dumps({"msg": f"score doc:{fname}"}),
+                       hx_target="#chat-area", hx_swap="beforeend",
+                       hx_on__before_request=_THINKING_JS,
+                       hx_on__after_request="var t=document.getElementById('thinking-live'); if(t) t.remove();",
+                       cls="text-xs text-green-600 hover:underline"),
+            ),
+        ))
+    return Div(
+        H1("Documents", cls="text-xl font-bold text-gray-800 mb-1"),
+        P(f"{len(files)} files available", cls="text-sm text-gray-500 mb-4"),
+        Table(
+            Thead(Tr(*[Th(h, cls="text-xs text-gray-500 text-left py-2 px-2") for h in ["Type", "Name", "Size", "Actions"]])),
+            Tbody(*rows),
+            cls="w-full",
+        ) if rows else P("No documents yet. Upload via the paperclip button.", cls="text-sm text-gray-400 italic"),
+        cls="p-6 max-w-4xl",
+    )
+
+
+@rt("/page/deals")
+def page_deals():
+    """Deal history with Plotly dashboard."""
+    from utils.database import db_service
+    from components.charts import DealsByTypeChart, DealTimelineChart, DealStatusPie
+    from components.cards import MetricCard
+
+    stats = db_service.get_deal_stats()
+    recent = db_service.get_recent_workflows(15)
+
+    # Metrics row
+    metrics = Div(
+        MetricCard("Total Workflows", stats["total"], color="blue"),
+        MetricCard("Conversations", stats["by_type"].get("conversation", 0), color="green"),
+        MetricCard("Completed", stats["by_status"].get("completed", 0), color="green"),
+        MetricCard("Active", stats["by_status"].get("active", 0), color="yellow"),
+        cls="grid grid-cols-4 gap-3 mb-6",
+    )
+
+    # Charts row
+    charts = Div(
+        Div(DealsByTypeChart("deals-by-type", stats["by_type"]), cls="bg-white rounded-lg p-4 border border-gray-200"),
+        Div(DealTimelineChart("deals-timeline", stats["timeline"]), cls="bg-white rounded-lg p-4 border border-gray-200"),
+        Div(DealStatusPie("deals-status", stats["by_status"]), cls="bg-white rounded-lg p-4 border border-gray-200"),
+        cls="grid grid-cols-3 gap-3 mb-6",
+    )
+
+    # Recent table
+    table_rows = []
+    for w in recent:
+        status_cls = {"completed": "bg-green-100 text-green-700", "active": "bg-blue-100 text-blue-700", "failed": "bg-red-100 text-red-700", "pending": "bg-yellow-100 text-yellow-700"}.get(w.get("status",""), "bg-gray-100 text-gray-600")
+        table_rows.append(Tr(
+            Td(Span(w.get("workflow_type","").replace("_"," ").title(), cls="text-xs font-medium")),
+            Td(Span(w.get("user_query","")[:60], cls="text-xs text-gray-600")),
+            Td(Span(w.get("status",""), cls=f"text-xs px-2 py-0.5 rounded-full {status_cls}")),
+            Td(Span(w.get("created_at","")[:16], cls="text-xs text-gray-400")),
+        ))
+
+    table = Table(
+        Thead(Tr(*[Th(h, cls="text-xs text-gray-500 text-left py-2") for h in ["Type", "Query", "Status", "Created"]])),
+        Tbody(*table_rows),
+        cls="w-full",
+    ) if table_rows else P("No workflows yet.", cls="text-sm text-gray-400 italic")
+
+    return Div(
+        H1("Deal History", cls="text-xl font-bold text-gray-800 mb-1"),
+        P("Workflow activity and analytics", cls="text-sm text-gray-500 mb-4"),
+        metrics,
+        charts,
+        H2("Recent Workflows", cls="text-sm font-bold text-gray-700 mb-2"),
+        Div(table, cls="bg-white rounded-lg p-4 border border-gray-200"),
+        cls="p-6",
+    )
+
+
+@rt("/page/tools")
+def page_tools():
+    """Static M&A tools page."""
+    tools = [
+        ("Deal Room", "Secure virtual data room for due diligence", "Available", "green"),
+        ("CIM Generator", "Confidential Information Memorandum builder", "Available", "green"),
+        ("Comparable Transactions", "Transaction comp analysis", "Available", "green"),
+        ("LOI Drafter", "Letter of Intent template generator", "Available", "green"),
+        ("DD Checklist", "Due diligence checklist management", "Available", "green"),
+        ("Regulatory Screening", "Cross-border regulatory analysis", "Beta", "yellow"),
+        ("Stakeholder Mapping", "Key stakeholder identification", "Beta", "yellow"),
+        ("Integration Playbook", "Post-merger integration planning", "Beta", "yellow"),
+        ("Pipeline CRM", "Deal pipeline management", "Available", "green"),
+    ]
+    cards = []
+    for name, desc, status, color in tools:
+        status_cls = f"bg-{color}-100 text-{color}-700"
+        cards.append(Div(
+            Div(
+                Span(name, cls="text-sm font-medium text-gray-800"),
+                Span(status, cls=f"text-xs px-2 py-0.5 rounded-full {status_cls}"),
+                cls="flex items-center justify-between mb-1",
+            ),
+            P(desc, cls="text-xs text-gray-500"),
+            cls="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow",
+        ))
+    return Div(
+        H1("M&A Tools", cls="text-xl font-bold text-gray-800 mb-1"),
+        P("Platform tools for deal execution", cls="text-sm text-gray-500 mb-4"),
+        Div(*cards, cls="grid grid-cols-3 gap-3"),
+        cls="p-6",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Conversation management (logged-in users)
+# ---------------------------------------------------------------------------
+@rt("/conversation/new")
+def conversation_new(session):
+    """Start a new conversation."""
+    session.pop("conversation_id", None)
+    session.pop("recent_user_messages", None)
+    session.pop("last_agent_slug", None)
+    return RedirectResponse("/", status_code=303)
+
+@rt("/conversation/{conv_id}")
+def conversation_load(session, conv_id: str):
+    """Load a previous conversation's messages into the chat area."""
+    user = session.get("user")
+    if not user:
+        return ""
+    from utils.database import db_service
+    messages = db_service.get_user_messages(conv_id, user["user_id"])
+    if not messages and not db_service.conversation_belongs_to_user(conv_id, user["user_id"]):
+        return Response("Not found", status_code=404)
+    session["conversation_id"] = conv_id
+    session["recent_user_messages"] = [
+        str(m["content"])[:240] for m in messages
+        if m.get("role") == "user" and m.get("content")
+    ][-5:]
+    session.pop("last_agent_slug", None)
+    from components.chat_shell import message_bubble
+    parts = [message_bubble(m["role"], m["content"]) for m in messages]
+    if not parts:
+        parts.append(_assistant_bubble(P("Empty conversation.", cls="text-sm text-gray-400")))
+    return Div(*parts)
+
+@rt("/conversations")
+def conversations_list(session):
+    """Return conversation list HTML partial for nav sidebar."""
+    user = session.get("user")
+    if not user:
+        return ""
+    from utils.database import db_service
+    convs = db_service.get_user_conversations(user["user_id"], limit=20)
+    return _conversation_list_html(convs, session.get("conversation_id"))
+
+@rt("/conversations/search")
+def conversations_search(session, q: str = ""):
+    """Search conversations by title."""
+    user = session.get("user")
+    if not user:
+        return ""
+    from utils.database import db_service
+    if q.strip():
+        convs = db_service.search_conversations(user["user_id"], q.strip())
+    else:
+        convs = db_service.get_user_conversations(user["user_id"], limit=20)
+    return _conversation_list_html(convs, session.get("conversation_id"))
+
+def _conversation_list_html(convs, active_id=None):
+    """Render conversation list items."""
+    if not convs:
+        return P("No conversations yet.", cls="text-xs text-gray-400 italic px-3 py-2")
+    items = []
+    for c in convs:
+        title = c.get("conversation_title") or c.get("user_query", "Untitled")
+        title = title[:50] + "..." if len(title) > 50 else title
+        is_active = c["id"] == active_id if active_id else False
+        active_cls = "bg-blue-50 text-blue-700" if is_active else "text-gray-600 hover:bg-gray-50"
+        items.append(
+            A(
+                Span(title, cls="text-xs truncate block"),
+                hx_get=f"/conversation/{c['id']}",
+                hx_target="#chat-area",
+                hx_swap="innerHTML",
+                onclick=f"document.getElementById('welcome-section')?.remove();",
+                cls=f"block px-3 py-1.5 rounded cursor-pointer transition-colors {active_cls}",
+            )
+        )
+    return Div(*items)
+
+
+@rt("/chat")
+async def chat(session, msg: str = ""):
+    if not msg.strip():
+        return ""
+
+    from agents.render_agent import render_agent
+
+    # User bubble
+    parts = [_user_bubble(msg)]
+
+    # Special: clear
+    if msg.strip().lower() in ("clear", "cls"):
+        session.pop("conversation_id", None)
+        return Div(
+            _assistant_bubble(P("Chat cleared.", cls="text-sm text-gray-500")),
+            Script("document.getElementById('chat-area').innerHTML = '';"),
+        )
+
+    # Persist user message (logged-in users only)
+    user = session.get("user")
+    conv_id = session.get("conversation_id") if user else None
+    new_conv = False
+    if user and not conv_id:
+        try:
+            from utils.database import db_service
+            conv_id = db_service.create_conversation(user["user_id"], msg[:200])
+            session["conversation_id"] = conv_id
+            new_conv = True
+        except Exception:
+            conv_id = None
+    if conv_id:
+        try:
+            from utils.database import db_service
+            db_service.add_message(conv_id, "user", msg)
+            db_service.update_conversation_timestamp(conv_id)
+        except Exception:
+            pass
+
+    # Process with render agent
+    response_text = ""
+    try:
+        from utils.request_context import set_current_user_id, reset_current_user_id
+        context_token = set_current_user_id(user.get("user_id") if user else None)
+        try:
+            result_components = await render_agent.process(
+                msg,
+                active_role=session.get("role", "buyer"),
+            )
+        finally:
+            reset_current_user_id(context_token)
+        if result_components:
+            parts.append(_assistant_bubble(*result_components))
+            response_text = msg  # Fallback: store the query as context
+        else:
+            parts.append(_assistant_bubble(P("Done.", cls="text-sm text-gray-500")))
+            response_text = "Done."
+    except Exception as e:
+        parts.append(_assistant_bubble(P(f"Error: {str(e)[:300]}", cls="text-sm text-red-600")))
+        response_text = f"Error: {str(e)[:300]}"
+
+    # Persist assistant response
+    if conv_id:
+        try:
+            from utils.database import db_service
+            db_service.add_message(conv_id, "assistant", response_text)
+        except Exception:
+            pass
+
+    # Contextual suggestion chips (OOB swap)
+    context_type, context_data = _determine_context(msg, parts)
+    parts.append(_contextual_chips(context_type, context_data))
+
+    # Auto-open canvas for document/score/research commands
+    from utils.command_parser import parse_command
+    cmd, subject, params = parse_command(msg)
+
+    # Detect pitch deck / term sheet references in free-form text
+    msg_lower = msg.lower()
+    if cmd is None and ("pitch deck" in msg_lower or "term sheet" in msg_lower):
+        pitch_path = DOCS_DATA_DIR / "NovaTech-Pitch-Deck.pdf"
+        if pitch_path.exists():
+            fn = "NovaTech-TermSheet-Draft.pdf" if "term sheet" in msg_lower else "NovaTech-Pitch-Deck.pdf"
+            parts.append(Script(
+                f"document.getElementById('right-pane').classList.remove('translate-x-full');"
+                f"htmx.ajax('GET', '/doc/panel?fn={fn}', '#canvas-content');"
+            ))
+
+    # Push conversation_id to JS so Share button works on new sessions
+    if new_conv and conv_id:
+        parts.append(Script(f"if(typeof setSid==='function')setSid('{conv_id}');"))
+
+    # Refresh conversation list in nav (OOB)
+    if conv_id:
+        parts.append(Div(
+            hx_get="/conversations",
+            hx_trigger="load",
+            hx_target="#chat-history",
+            hx_swap="innerHTML",
+            id="chat-history-refresh",
+            hx_swap_oob="true",
+            cls="hidden",
+        ))
+
+    return Div(*parts)
+
+
+# ---------------------------------------------------------------------------
+# File upload via chat (drag-drop or button)
+# ---------------------------------------------------------------------------
+@rt("/chat-upload")
+async def chat_upload(file: UploadFile, session):
+    if not file or not file.filename:
+        return _assistant_bubble(P("No file selected.", cls="text-sm text-red-500"))
+    user = session.get("user")
+    if not user:
+        return Response("Authentication required", status_code=401)
+
+    content = await file.read()
+    if len(content) > UPLOAD_MAX_BYTES:
+        return _assistant_bubble(P("File too large.", cls="text-sm text-red-500"))
+    try:
+        save_path, document_id = safe_upload_target(UPLOAD_DIR, user["user_id"], file.filename)
+    except ValueError as exc:
+        return _assistant_bubble(P(str(exc), cls="text-sm text-red-500"))
+    save_path.write_bytes(content)
+
+    from utils.document_parser import document_parser
+    parsed = document_parser.parse(str(save_path))
+    from components.upload_form import UploadResult
+    return Div(
+        _user_bubble(f"Uploaded: {Path(file.filename).name}"),
+        _assistant_bubble(
+            UploadResult(parsed),
+            Div(
+                Button(
+                    "Score: Find Buyers",
+                    hx_post="/chat",
+                    hx_vals=json.dumps({"msg": f"score doc:{document_id}"}),
+                    hx_target="#chat-area",
+                    hx_swap="beforeend",
+                    cls="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 mt-3",
+                ),
+            ),
+        ),
+        # Open document in right pane
+        Script("if(window.toggleNewsPane)window.toggleNewsPane();"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Serve
+# ---------------------------------------------------------------------------
+# Disable the auto-reloader in production (Coolify sets ENVIRONMENT=production):
+# the WatchFiles reloader slows container boot and muddies health checks.
+_prod = os.getenv("ENVIRONMENT", "").lower() == "production"
+serve(port=int(os.getenv("PORT", "5007")), reload=not _prod)

@@ -1,3 +1,4 @@
+# ⚠️ 2026-09-29：examples 已迁移为 FastOffice 套件 23 项目（启动-*.bat 过渡态），本生成器清单仍为旧 01-20 目录，暂未对接；待启动器规范改造（launcher.py + launcher.json）时重写清单并启用。
 # -*- coding: utf-8 -*-
 """gen_launchers.py — 以 templates/shared/launcher.py 为唯一真源，分发自包含启动器到 examples。
 

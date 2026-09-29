@@ -2,7 +2,7 @@
 
 ## 标准项目结构（分层模块化）
 
-所有 `fasthtml-desktop` 项目统一采用**分层模块化**结构：表示层（视图与路由）→ 业务层（业务域包）→ 数据层（数据访问）。依赖单向自上而下，禁止跨层调用。参照实现：`examples/04-FastERP/`（`web/` 表示层 + `fasterp/` 业务域包 + `db.py` 数据层 + `web_app.py` 组装入口）。
+所有 `fasthtml-desktop` 项目统一采用**分层模块化**结构：表示层（视图与路由）→ 业务层（业务域包）→ 数据层（数据访问）。依赖单向自上而下，禁止跨层调用。参照实现：`examples/FastERP/`（内层 `FastERP/FastERP/`：`web/` 表示层 + `fasterp/` 业务域包 + `db.py` 数据层 + `web_app.py` 组装入口）。
 
 ### 分层骨架
 
@@ -56,7 +56,7 @@ my-desktop-app/
 | 模块拆分 | ✅ 按业务域拆包，高内聚低耦合 |
 | 导入路径 | `from web import views` / `from services.sales import create_order` |
 | PyInstaller 配置 | `--collect-submodules fasthtml` + 按需收集业务包 |
-| 参照实现 | `examples/04-FastERP/`（web/ + fasterp/ + db.py + web_app.py） |
+| 参照实现 | `examples/FastERP/`（内层 `FastERP/FastERP/`：web/ + fasterp/ + db.py + web_app.py） |
 
 ### 核心层分工
 

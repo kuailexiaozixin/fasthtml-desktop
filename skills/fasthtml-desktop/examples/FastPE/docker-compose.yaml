@@ -1,0 +1,21 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5058:5058"
+    environment:
+      - DB_URL=${DB_URL}
+      - XAI_API_KEY=${XAI_API_KEY}
+    labels:
+      - coolify.managed=true
+      - coolify.fqdn=https://pehero.chat
+      - coolify.port=5058
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5058/').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped

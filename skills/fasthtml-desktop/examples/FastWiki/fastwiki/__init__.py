@@ -1,0 +1,2 @@
+"""FastWiki package."""
+

@@ -1,0 +1,33 @@
+# Secrets & local config
+.env
+
+# Database (rebuild with: python seed.py)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Uploaded CVs — personal data, never committed (see plan §12.3)
+uploads/
+
+# Integration sync snapshots — personal data, never committed
+data/
+
+# Playwright / scratch
+.playwright-mcp/
+/tmp/
+
+# Local design reference shots (never commit)
+references/
+
+# Impeccable live-server runtime state (ephemeral pid/port/token)
+.impeccable/live/
+
+# OS
+.DS_Store

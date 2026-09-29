@@ -3,7 +3,7 @@
 > 在工作流 ② 架构设计阶段内使用——② 定骨架（几层、哪几个业务域、域间依赖方向，建筑结构图），本文档定域内细节（每域功能清单、接口契约、数据流，房间布置图）。
 > 将需求分解为功能模块，定义模块职责、接口和协作关系。
 >
-> **模块命名：业务域优先**——模块第一维度是**业务域**（sales / purchasing / inventory / accounting / preorders），技术横切（auth / config / errors）为第二维度：业务逻辑按业务域拆包（`services/sales.py`、`services/purchasing.py`），界面按页面域拆包（`web/views.py`、`web/landing.py`），数据访问统一收敛到 `db.py`。参照实现：`examples/04-FastERP/`（`fasterp/` 业务层按域拆包、`web/` 表示层按页面域拆包、`web_app.py` 只做组装）。
+> **模块命名：业务域优先**——模块第一维度是**业务域**（sales / purchasing / inventory / accounting / preorders），技术横切（auth / config / errors）为第二维度：业务逻辑按业务域拆包（`services/sales.py`、`services/purchasing.py`），界面按页面域拆包（`web/views.py`、`web/landing.py`），数据访问统一收敛到 `db.py`。参照实现：`examples/FastERP/`（内层 `FastERP/FastERP/`：`fasterp/` 业务层按域拆包、`web/` 表示层按页面域拆包、`web_app.py` 只做组装）。
 
 ---
 

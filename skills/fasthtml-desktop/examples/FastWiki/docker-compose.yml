@@ -1,0 +1,11 @@
+services:
+  fastwiki:
+    build: .
+    ports:
+      - "5022:5022"
+    env_file: .env
+    volumes:
+      - fastwiki-data:/app/data
+volumes:
+  fastwiki-data:
+

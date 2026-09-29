@@ -24,7 +24,7 @@
 
 5. **切解释器重入禁止 `os.execv`（Windows 路径含空格必炸）**：启动器凡需切换解释器重新执行自身（`USE_VENV=True` 进项目 `.venv`、`ISOLATED_VENV` 进外置隔离环境），**必须用 `subprocess.call([...])` + `sys.exit(rc)`，禁止 `os.execv`**。Windows 的 CRT `execv` 把 argv 用空格拼成命令行且**不加引号**，脚本路径只要含空格（实测 `...\WPS 灵犀\...`）子进程就报 `can't open file 'C:\Users\x\AppData\Roaming\WPS'` 后静默失败；`subprocess` 走 `list2cmdline` 会正确加引号。代价仅是多留一个父进程壳。重入时须给子进程传 `FD_REEXEC=1`，让它以**追加模式**续写同一份 `启动诊断.log`，否则子进程会把父进程刚写的建环境记录截断。
 
-6. **依赖预检铁律（必须解析 requirements.txt，禁止写死子集）**：预检**必须逐条读取 `requirements.txt` 并 `importlib.util.find_spec()` 检查**，禁止使用手写的模块名常量（如 `import fasthtml, webview, uvicorn`）。写死子集会产生**假阳性放行**——预检通过 → 跳过安装 → 应用在真正缺失的包上崩溃（实测：03-FastCRM 预检通过但缺 `fastapi`，01 缺 `requests`，均在导入期崩溃）。包名与 import 名不一致者需维护映射表（`python-fasthtml→fasthtml`、`pywebview→webview`、`python-dotenv→dotenv`、`Pillow→PIL`）。**无 `requirements.txt` 的示例必须先补齐**，不得依赖脚本内的兜底安装列表。
+6. **依赖预检铁律（必须解析 requirements.txt，禁止写死子集）**：预检**必须逐条读取 `requirements.txt` 并 `importlib.util.find_spec()` 检查**，禁止使用手写的模块名常量（如 `import fasthtml, webview, uvicorn`）。写死子集会产生**假阳性放行**——预检通过 → 跳过安装 → 应用在真正缺失的包上崩溃（实测：曾有示例预检通过但缺 `fastapi`/`requests`，均在导入期崩溃）。包名与 import 名不一致者需维护映射表（`python-fasthtml→fasthtml`、`pywebview→webview`、`python-dotenv→dotenv`、`Pillow→PIL`）。**无 `requirements.txt` 的示例必须先补齐**，不得依赖脚本内的兜底安装列表。
 
 7. **禁止全量重定向输出**：严禁 `"%PY%" "%ENTRY%" > "%LOG%" 2>&1` 这类把全部输出吞进文件的写法——pip 安装数分钟内界面完全静默，用户无法判断是卡死还是在工作，失败后才一次性吐出大段日志。**实时可观测性的诊断价值远高于事后取证**。需要留档时用 `tee` 式双写，不得牺牲控制台实时输出。
 

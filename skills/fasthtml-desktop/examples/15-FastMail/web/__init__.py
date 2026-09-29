@@ -1,1 +1,0 @@
-"""FastCRM web package."""

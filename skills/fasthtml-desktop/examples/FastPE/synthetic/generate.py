@@ -1,0 +1,555 @@
+"""Seed the PEHero databases with synthetic PE data.
+
+Usage:
+    python -m synthetic.generate                  # seed=42, ~40 companies, indexes RAG
+    python -m synthetic.generate --seed 7
+    python -m synthetic.generate --skip-rag       # OLTP only
+    python -m synthetic.generate --limit 5        # small subset for quick testing
+    python -m synthetic.generate --fresh          # truncates tables first (safer than --drop)
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import random
+from datetime import date
+
+from dateutil.relativedelta import relativedelta
+
+from db import connect
+from rag.indexer import DocIn, upsert_documents, build_ann_index
+from synthetic import properties as P       # companies
+from synthetic import rent_rolls as RR      # cap tables
+from synthetic import t12s as T12           # monthly financials
+from synthetic import comps as CMP          # txn + trading comps
+from synthetic import market_signals as MS
+from synthetic import lps as LP
+from synthetic import leases as LEASE       # customer MSA bodies
+from synthetic import documents as DOC
+from synthetic import credit as CREDIT
+
+log = logging.getLogger(__name__)
+
+TRUNCATE_TABLES = [
+    "pehero.agent_invocations",
+    "pehero.deal_risks",
+    "pehero.deal_milestones",
+    "pehero.dd_findings",
+    "pehero.portfolio_kpis",
+    "pehero.market_signals",
+    "pehero.investor_crm",
+    "pehero.credit_monitoring",
+    "pehero.credit_ratings",
+    "pehero.credit_collateral",
+    "pehero.credit_covenants",
+    "pehero.credit_cashflows",
+    "pehero.credit_facilities",
+    "pehero.debt_stacks",
+    "pehero.lbo_models",
+    "pehero.trading_comps",
+    "pehero.transaction_comps",
+    "pehero.contracts",
+    "pehero.financials",
+    "pehero.cap_tables",
+    "pehero.companies",
+    # chat left alone to preserve user sessions across reseed
+]
+
+
+def _truncate():
+    with connect() as conn, conn.cursor() as cur:
+        for t in TRUNCATE_TABLES:
+            cur.execute(f"TRUNCATE TABLE {t} RESTART IDENTITY CASCADE")
+        cur.execute("TRUNCATE TABLE pehero_rag.rag_queries RESTART IDENTITY")
+        cur.execute("TRUNCATE TABLE pehero_rag.embeddings RESTART IDENTITY")
+        cur.execute("TRUNCATE TABLE pehero_rag.chunks RESTART IDENTITY CASCADE")
+        cur.execute("TRUNCATE TABLE pehero_rag.documents RESTART IDENTITY CASCADE")
+        conn.commit()
+
+
+def _insert_companies(specs: list[dict]) -> dict[str, int]:
+    slug_to_id: dict[str, int] = {}
+    with connect() as conn, conn.cursor() as cur:
+        for s in specs:
+            cur.execute(
+                """
+                INSERT INTO pehero.companies
+                  (slug, name, hq_city, hq_state, country, sector, sub_sector, website,
+                   founded_year, employees, revenue_ltm, ebitda_ltm, ebitda_margin,
+                   growth_rate, ownership, deal_stage, deal_type, enterprise_value,
+                   ask_multiple, description, seller_intent, triage_score, triage_priority)
+                VALUES (%(slug)s, %(name)s, %(hq_city)s, %(hq_state)s, %(country)s,
+                        %(sector)s, %(sub_sector)s, %(website)s,
+                        %(founded_year)s, %(employees)s, %(revenue_ltm)s, %(ebitda_ltm)s,
+                        %(ebitda_margin)s, %(growth_rate)s, %(ownership)s, %(deal_stage)s,
+                        %(deal_type)s, %(enterprise_value)s, %(ask_multiple)s,
+                        %(description)s, %(seller_intent)s, %(triage_score)s, %(triage_priority)s)
+                ON CONFLICT (slug) DO UPDATE SET
+                  name = EXCLUDED.name, description = EXCLUDED.description
+                RETURNING id, slug
+                """,
+                s,
+            )
+            row = cur.fetchone()
+            slug_to_id[row[1]] = row[0]
+        conn.commit()
+    return slug_to_id
+
+
+def _insert_cap_tables(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    n = 0
+    as_of = date.today().replace(day=1)
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            ct = RR.generate_for_company(co, as_of, rng)
+            cur.execute(
+                """
+                INSERT INTO pehero.cap_tables (company_id, as_of_date, holders, total_shares, post_money)
+                VALUES (%s, %s::date, %s::jsonb, %s, %s)
+                ON CONFLICT (company_id, as_of_date) DO UPDATE SET
+                  holders = EXCLUDED.holders,
+                  total_shares = EXCLUDED.total_shares,
+                  post_money = EXCLUDED.post_money
+                """,
+                (cid, ct["as_of_date"], json.dumps(ct["holders"]),
+                 ct["total_shares"], ct["post_money"]),
+            )
+            n += 1
+        conn.commit()
+    return n
+
+
+def _insert_financials(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    n = 0
+    end_month = date.today().replace(day=1) - relativedelta(months=1)
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            rows = T12.generate_for_company(co, end_month, rng)
+            for r in rows:
+                cur.execute(
+                    """
+                    INSERT INTO pehero.financials
+                      (company_id, month, revenue, cogs, gross_profit, opex, ebitda,
+                       adjustments, adj_ebitda, arr, gross_retention, net_retention)
+                    VALUES (%s, %s::date, %s, %s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s)
+                    ON CONFLICT (company_id, month) DO UPDATE SET
+                      revenue = EXCLUDED.revenue, cogs = EXCLUDED.cogs,
+                      gross_profit = EXCLUDED.gross_profit, opex = EXCLUDED.opex,
+                      ebitda = EXCLUDED.ebitda, adjustments = EXCLUDED.adjustments,
+                      adj_ebitda = EXCLUDED.adj_ebitda,
+                      arr = EXCLUDED.arr, gross_retention = EXCLUDED.gross_retention,
+                      net_retention = EXCLUDED.net_retention
+                    """,
+                    (cid, r["month"], r["revenue"], r["cogs"], r["gross_profit"],
+                     json.dumps(r["opex"]), r["ebitda"], json.dumps(r["adjustments"]),
+                     r["adj_ebitda"], r["arr"], r["gross_retention"], r["net_retention"]),
+                )
+                n += 1
+        conn.commit()
+    return n
+
+
+def _insert_contracts(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    """Insert synthetic customer MSAs (and a handful of supplier + employment) per company."""
+    n = 0
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            # customer MSAs
+            n_customers = rng.randint(8, 20)
+            for _ in range(n_customers):
+                start = date.today() - relativedelta(days=rng.randint(180, 1200))
+                term_years = rng.choice([1, 2, 3, 3, 5])
+                end = start + relativedelta(years=term_years)
+                annual_value = rng.randint(60_000, 3_500_000)
+                cur.execute(
+                    """
+                    INSERT INTO pehero.contracts
+                      (company_id, counterparty, contract_type, start_date, end_date,
+                       annual_value, auto_renew, change_of_control_trigger,
+                       termination_notice_days, exclusivity, status)
+                    VALUES (%s, %s, %s, %s::date, %s::date, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (cid,
+                     rng.choice([
+                         "Acme Industrial", "Vector Logistics", "Harborlight Holdings",
+                         "Cascade Retail", "Northwind Distributors", "Meridian Hospitals",
+                         "Alpine Foods", "Orbit Communications", "Brightline Logistics",
+                         "Summit Health Systems", "Wavecrest Retail", "Keystone Partners",
+                     ]) + " " + rng.choice(["Inc", "LLC", "Corp", "Co"]),
+                     "customer_msa", start.isoformat(), end.isoformat(), annual_value,
+                     rng.random() < 0.7, rng.random() < 0.35,
+                     rng.choice([30, 60, 90, 90, 120]),
+                     rng.random() < 0.12,
+                     "active" if end > date.today() else "expired"),
+                )
+                n += 1
+            # a few suppliers
+            for _ in range(rng.randint(2, 6)):
+                start = date.today() - relativedelta(days=rng.randint(90, 900))
+                end = start + relativedelta(years=rng.choice([2, 3, 5]))
+                cur.execute(
+                    """
+                    INSERT INTO pehero.contracts
+                      (company_id, counterparty, contract_type, start_date, end_date,
+                       annual_value, auto_renew, change_of_control_trigger,
+                       termination_notice_days, exclusivity, status)
+                    VALUES (%s, %s, %s, %s::date, %s::date, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (cid,
+                     rng.choice(["Global Components", "Rising Sun Manufacturing",
+                                 "Pinecrest Services", "Nimbus Cloud Infra",
+                                 "Westbridge Logistics", "Twin Cities Staffing"])
+                     + " " + rng.choice(["Inc", "LLC", "Corp"]),
+                     "supplier", start.isoformat(), end.isoformat(),
+                     rng.randint(80_000, 1_500_000),
+                     rng.random() < 0.5, rng.random() < 0.2,
+                     rng.choice([30, 60, 90]), rng.random() < 0.2,
+                     "active"),
+                )
+                n += 1
+        conn.commit()
+    return n
+
+
+RISK_POOL = [
+    ("financial", "Customer concentration risk", "Diversify revenue across top 5 accounts"),
+    ("financial", "Working capital volatility", "Implement 13-week cash flow forecast"),
+    ("financial", "Revenue recognition uncertainty", "Engage Big 4 for QoE review"),
+    ("financial", "FX exposure on Baltic trade", "Hedge EUR/USD with forward contracts"),
+    ("operational", "Key person dependency", "Ensure management incentives and retention packages"),
+    ("operational", "IT systems integration risk", "Conduct IT due diligence and migration plan"),
+    ("operational", "Supply chain single-source risk", "Dual-source critical components"),
+    ("operational", "Workforce scalability constraints", "Map hiring pipeline and labor market"),
+    ("legal", "Pending litigation exposure", "Obtain legal opinion and reserve estimate"),
+    ("legal", "IP ownership ambiguity", "Commission IP audit and chain-of-title review"),
+    ("legal", "GDPR compliance gaps", "Engage privacy counsel for gap assessment"),
+    ("legal", "Change-of-control clause triggers", "Map all CoC clauses and negotiate waivers"),
+    ("market", "Sector cyclicality exposure", "Model downside scenario at -20% revenue"),
+    ("market", "Regulatory change risk", "Monitor pending legislation and model impact"),
+    ("market", "Competitive entry threat", "Benchmark moat against top 3 competitors"),
+    ("integration", "Culture clash post-close", "Develop 100-day integration playbook"),
+    ("integration", "ERP migration complexity", "Budget 6-month parallel run period"),
+    ("integration", "Retention of key clients during transition", "Draft client communication plan"),
+]
+
+MILESTONE_POOL = [
+    ("Management presentation", "Deal lead"),
+    ("Preliminary valuation model", "Finance"),
+    ("VDR access and document review", "Operations"),
+    ("Quality of earnings report", "Finance"),
+    ("Commercial due diligence", "Deal lead"),
+    ("Legal due diligence memo", "Legal"),
+    ("IT systems assessment", "Operations"),
+    ("SPA first draft review", "Legal"),
+    ("IC memo submitted", "Deal lead"),
+    ("Financing term sheet", "Finance"),
+    ("Final close conditions", "Legal"),
+    ("100-day plan drafted", "Operations"),
+]
+
+
+def _insert_risks(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    n = 0
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            k = rng.randint(3, 6)
+            picks = rng.sample(RISK_POOL, min(k, len(RISK_POOL)))
+            for cat, title, mitigation in picks:
+                cur.execute(
+                    "INSERT INTO pehero.deal_risks "
+                    "(company_id, title, probability, impact, category, mitigation) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (cid, title, rng.randint(1, 5), rng.randint(1, 5), cat, mitigation),
+                )
+                n += 1
+        conn.commit()
+    return n
+
+
+def _insert_milestones(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    n = 0
+    today = date.today()
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            stage = co.get("deal_stage") or "sourced"
+            if stage in ("exited", "passed"):
+                continue
+            k = rng.randint(4, 7)
+            picks = rng.sample(MILESTONE_POOL, min(k, len(MILESTONE_POOL)))
+            base_offset = rng.randint(-30, 30)
+            for i, (title, owner) in enumerate(picks):
+                due = today + relativedelta(days=base_offset + i * rng.randint(15, 35))
+                pct = rng.choice([0, 0, 20, 40, 60, 80, 100, 100])
+                if pct == 100:
+                    status = "done"
+                elif due < today and pct < 100:
+                    status = "overdue"
+                elif pct > 0 and rng.random() < 0.08:
+                    status = "blocked"
+                else:
+                    status = "open"
+                cur.execute(
+                    "INSERT INTO pehero.deal_milestones "
+                    "(company_id, title, due_date, owner, pct_complete, status) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (cid, title, due.isoformat(), owner, pct, status),
+                )
+                n += 1
+        conn.commit()
+    return n
+
+
+def _insert_txn_comps(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> tuple[int, int]:
+    s = r = 0
+    with connect() as conn, conn.cursor() as cur:
+        for cid, co in cos_with_ids:
+            for c in CMP.generate_transaction_comps(co, rng):
+                cur.execute(
+                    """
+                    INSERT INTO pehero.transaction_comps
+                      (company_id, target_name, acquirer, sector, sub_sector, country,
+                       announce_date, close_date, enterprise_value, revenue, ebitda,
+                       ev_revenue, ev_ebitda, deal_type, source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s::date, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (cid, c["target_name"], c["acquirer"], c["sector"], c["sub_sector"],
+                     c["country"], c["announce_date"], c["close_date"], c["enterprise_value"],
+                     c["revenue"], c["ebitda"], c["ev_revenue"], c["ev_ebitda"],
+                     c["deal_type"], c["source"]),
+                )
+                s += 1
+            for c in CMP.generate_trading_comps(co, rng):
+                cur.execute(
+                    """
+                    INSERT INTO pehero.trading_comps
+                      (company_id, ticker, peer_name, sector, market_cap, ev,
+                       revenue_ltm, ebitda_ltm, ev_revenue, ev_ebitda, rev_growth,
+                       ebitda_margin, as_of_date, source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::date, %s)
+                    """,
+                    (cid, c["ticker"], c["peer_name"], c["sector"], c["market_cap"], c["ev"],
+                     c["revenue_ltm"], c["ebitda_ltm"], c["ev_revenue"], c["ev_ebitda"],
+                     c["rev_growth"], c["ebitda_margin"], c["as_of_date"], c["source"]),
+                )
+                r += 1
+        conn.commit()
+    return s, r
+
+
+def _insert_market_signals(rows: list[dict]) -> int:
+    with connect() as conn, conn.cursor() as cur:
+        for r in rows:
+            cur.execute(
+                """
+                INSERT INTO pehero.market_signals
+                  (sector, sub_sector, metric, value, as_of_date, source)
+                VALUES (%s, %s, %s, %s, %s::date, %s)
+                ON CONFLICT (sector, sub_sector, metric, as_of_date) DO UPDATE SET
+                  value = EXCLUDED.value, source = EXCLUDED.source
+                """,
+                (r["sector"], r["sub_sector"], r["metric"], r["value"], r["as_of_date"], r["source"]),
+            )
+        conn.commit()
+    return len(rows)
+
+
+def _insert_lps(rows: list[dict]) -> int:
+    with connect() as conn, conn.cursor() as cur:
+        for r in rows:
+            cur.execute(
+                """
+                INSERT INTO pehero.investor_crm
+                  (name, firm, lp_type, email, commitment_size, stage, focus, geography,
+                   aum, last_touch, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::date, %s)
+                """,
+                (r["name"], r["firm"], r["lp_type"], r["email"], r["commitment_size"],
+                 r["stage"], r["focus"], r["geography"], r["aum"],
+                 r["last_touch"], r["notes"]),
+            )
+        conn.commit()
+    return len(rows)
+
+
+def _insert_credit(rows: list[dict]) -> int:
+    """Insert reproducible multi-strategy credit examples and monitoring history."""
+    with connect() as conn, conn.cursor() as cur:
+        for r in rows:
+            cash_rate = max(r["base_rate_pct"], r["floor_pct"]) + r["spread_bps"] / 100
+            cur.execute(
+                """INSERT INTO pehero.credit_facilities
+                   (company_id, name, strategy, facility_type, currency, commitment, drawn_amount,
+                    base_rate_pct, spread_bps, floor_pct, cash_interest_pct, pik_interest_pct,
+                    oid_pct, upfront_fee_pct, amortization_pct, maturity_date, lien, obligor_grade,
+                    pd_pct, lgd_pct, synthetic_calibration)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,TRUE)
+                   RETURNING id""",
+                (r["company_id"], r["name"], r["strategy"], r["facility_type"], r["currency"],
+                 r["commitment"], r["drawn_amount"], r["base_rate_pct"], r["spread_bps"], r["floor_pct"],
+                 cash_rate, r["pik_interest_pct"], r["oid_pct"], r["upfront_fee_pct"], r["amortization_pct"],
+                 r["maturity_date"], r["lien"], r["obligor_grade"], r["pd_pct"], r["lgd_pct"]),
+            )
+            fid = cur.fetchone()[0]
+            balance = r["drawn_amount"]
+            for year in range(1, 6):
+                opening = balance
+                cash_interest = opening * cash_rate / 100
+                pik = opening * r["pik_interest_pct"] / 100
+                balance += pik
+                principal = balance if year == 5 else min(balance, r["drawn_amount"] * r["amortization_pct"] / 100)
+                balance -= principal
+                cur.execute(
+                    """INSERT INTO pehero.credit_cashflows
+                       (facility_id, period_end, opening_balance, cash_interest, pik_interest, principal, fees, closing_balance, scenario)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'base')""",
+                    (fid, date.today() + relativedelta(years=year), opening, cash_interest, pik, principal, 0, balance),
+                )
+            cur.execute(
+                """INSERT INTO pehero.credit_covenants
+                   (facility_id, covenant_type, threshold, direction, cure_rights)
+                   VALUES (%s,%s,%s,%s,%s)""",
+                (fid, r["covenant_type"], r["covenant_threshold"], r["covenant_direction"], "Equity cure subject to documentation"),
+            )
+            cur.execute(
+                """INSERT INTO pehero.credit_collateral
+                   (facility_id, collateral_type, gross_value, eligible_value, advance_rate_pct, haircut_pct, as_of_date)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (fid, r["collateral_type"], r["collateral_value"], r["collateral_value"] * .9,
+                 r["advance_rate_pct"], 100-r["advance_rate_pct"], date.today()),
+            )
+            expected_loss = r["drawn_amount"] * r["pd_pct"] / 100 * r["lgd_pct"] / 100
+            cur.execute(
+                """INSERT INTO pehero.credit_ratings
+                   (facility_id, as_of_date, obligor_grade, facility_grade, pd_pct, lgd_pct, expected_loss, rationale, synthetic_calibration)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,TRUE)""",
+                (fid, date.today(), r["obligor_grade"], r["obligor_grade"], r["pd_pct"], r["lgd_pct"],
+                 expected_loss, json.dumps({"source": "deterministic synthetic fixture", "venture_debt": False})),
+            )
+            watch = "watch" if r["headroom_pct"] < 10 or r["interest_cover_x"] < 1.5 else "performing"
+            cur.execute(
+                """INSERT INTO pehero.credit_monitoring
+                   (facility_id, as_of_date, revenue_variance_pct, ebitda_variance_pct, liquidity,
+                    leverage_x, interest_cover_x, dscr_x, covenant_headroom_pct, watch_status, notes)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb)""",
+                (fid, date.today(), r["revenue_variance_pct"], r["ebitda_variance_pct"], r["liquidity"],
+                 r["leverage_x"], r["interest_cover_x"], r["dscr_x"], r["headroom_pct"], watch,
+                 json.dumps({"synthetic_calibration": True})),
+            )
+        conn.commit()
+    return len(rows)
+
+
+def _index_rag(cos_with_ids: list[tuple[int, dict]], rng: random.Random) -> int:
+    """Index DD docs per company + top-2 customer MSAs per company + industry reports."""
+    docs: list[DocIn] = []
+
+    # Sample customer MSAs per company (top 2)
+    for cid, co in cos_with_ids:
+        with connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT counterparty, start_date, end_date, annual_value "
+                "FROM pehero.contracts WHERE company_id = %s AND contract_type = 'customer_msa' "
+                "ORDER BY annual_value DESC LIMIT 2",
+                (cid,),
+            )
+            msas = cur.fetchall()
+        for (counterparty, start_d, end_d, av) in msas:
+            av_f = float(av) if av is not None else 0
+            unit = {"holder": counterparty, "lease_start": str(start_d),
+                    "lease_end": str(end_d), "rent": int(av_f)}
+            body = LEASE.generate_lease_body(prop=co, unit=unit, rng=rng)
+            docs.append(DocIn(
+                title=f"MSA — {co['name']} / {counterparty}",
+                doc_type="msa",
+                text=body,
+                company_id=cid,
+                metadata={"counterparty": counterparty, "annual_value": av_f,
+                          "sector": co["sector"]},
+            ))
+
+    # DD docs per company
+    for cid, co in cos_with_ids:
+        for d in DOC.generate_all_for_property(co, rng):
+            docs.append(DocIn(
+                title=d["title"],
+                doc_type=d["doc_type"],
+                text=d["text"],
+                company_id=cid,
+                metadata={"sector": co["sector"], "sub_sector": co["sub_sector"]},
+            ))
+
+    # Industry reports by sector / sub_sector
+    for d in DOC.generate_market_reports([c for _, c in cos_with_ids], rng):
+        docs.append(DocIn(
+            title=d["title"],
+            doc_type=d["doc_type"],
+            text=d["text"],
+            metadata={},
+        ))
+
+    log.info("embedding + upserting %d documents", len(docs))
+    ids = upsert_documents(docs, replace=False)
+    return len(ids)
+
+
+def run(seed: int = 42, skip_rag: bool = False, limit: int | None = None, fresh: bool = False) -> None:
+    if fresh:
+        print("truncating pehero tables (preserving chat history)…")
+        _truncate()
+
+    rng = random.Random(seed)
+    specs = P.generate(seed=seed)
+    if limit:
+        specs = specs[:limit]
+    print(f"generated {len(specs)} companies")
+
+    slug_to_id = _insert_companies(specs)
+    cos_with_ids = [(slug_to_id[s["slug"]], s) for s in specs]
+
+    n = _insert_cap_tables(cos_with_ids, rng)
+    print(f"inserted cap tables for {n} companies")
+
+    n = _insert_financials(cos_with_ids, rng)
+    print(f"inserted {n} monthly financial rows")
+
+    n = _insert_contracts(cos_with_ids, rng)
+    print(f"inserted {n} contracts (customer MSAs + suppliers)")
+
+    n = _insert_risks(cos_with_ids, rng)
+    print(f"inserted {n} deal risks")
+
+    n = _insert_milestones(cos_with_ids, rng)
+    print(f"inserted {n} deal milestones")
+
+    s, r = _insert_txn_comps(cos_with_ids, rng)
+    print(f"inserted {s} transaction comps, {r} trading comps")
+
+    ms_rows = MS.generate([c for _, c in cos_with_ids], seed=seed)
+    n = _insert_market_signals(ms_rows)
+    print(f"inserted {n} market signal rows")
+
+    n = _insert_lps(LP.generate(count=60, seed=seed))
+    print(f"inserted {n} LP contacts")
+
+    n = _insert_credit(CREDIT.generate_for_companies(cos_with_ids, seed=seed))
+    print(f"inserted {n} synthetic private-credit facilities")
+
+    if not skip_rag:
+        n = _index_rag(cos_with_ids, rng)
+        print(f"indexed {n} RAG documents")
+        build_ann_index()
+
+    print("done")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--skip-rag", action="store_true")
+    ap.add_argument("--limit", type=int)
+    ap.add_argument("--fresh", action="store_true", help="truncate tables before seeding")
+    args = ap.parse_args()
+    run(seed=args.seed, skip_rag=args.skip_rag, limit=args.limit, fresh=args.fresh)

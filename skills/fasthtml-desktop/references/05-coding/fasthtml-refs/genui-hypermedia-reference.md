@@ -1,3 +1,5 @@
+> ⚠️ **失效声明（2026-09-29）**：本参考文档引用的示例 `examples/07-genui-weather` / `08-code-assistant` 已随 examples 整体迁移移除（现为 FastOffice 套件 23 项目）。文档中的 GenUI 技术拆解仍具参考价值，但示例路径与桌面化改造清单已不可对照。
+
 # AI is the new UI: Generative UI with FastHTML
 
 > **来源**: [kafkasl.github.io/genUI/](https://kafkasl.github.io/genUI/) — 作者：pol_avec (Fewsats / L402)

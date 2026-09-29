@@ -1,4 +1,4 @@
-# fasthtml-desktop
+﻿# fasthtml-desktop
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/kuailexiaozixin/fasthtml-desktop)](https://skills.sh/kuailexiaozixin/fasthtml-desktop)
@@ -14,8 +14,8 @@
 本技能为 AI Agent 提供一套**标准化、可复现**的 FastHTML 桌面应用开发流程，用 Web 技术栈做出带原生窗口的桌面程序：
 
 - **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
-- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
-- **20+ 参考实现**：`examples/` 覆盖 CRM、ERP、HRM、财务、进销存、法律、文档、表单等真实业务场景
+- **权威文档 HARD-GATE**：`skills/fasthtml-desktop/references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
+- **23 个参考实现**：`skills/fasthtml-desktop/examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务等真实业务场景）
 - **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
 - **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
 
@@ -164,13 +164,12 @@ fasthtml-desktop/                # 仓库根
 │       │   ├── 07-quality-gate/ # ⑦ 质量门禁（Check/Test/Debug 三层）
 │       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台 + 7 子专题）
 │       │   └── ...
-│       ├── examples/            # 20+ 参考实现（优先参考）
-│       │   ├── 03-FastCRM       # 客户关系管理
-│       │   ├── 04-FastERP       # 企业资源计划
-│       │   ├── 05-FastHRM       # 人事管理
-│       │   ├── 06-FastInsights  # 数据洞察
-│       │   ├── 09-FastSheets    # 电子表格
-│       │   ├── 12-FastLegal     # 法律服务
+│       ├── examples/            # 23 个参考实现（FastOffice 套件，优先参考）
+│       │   ├── FastERP          # ERP（订单到收款/采购到付款/会计引擎）
+│       │   ├── FastAccounts     # 财务总账（复式记账）
+│       │   ├── FastBI           # BI 分析平台（RAG 问答）
+│       │   ├── FastLegal        # 法务 AI
+│       │   ├── FastSheets       # 电子表格
 │       │   └── ...              # 完整列表见 examples/README.md
 │       ├── templates/           # 项目脚手架模板
 │       ├── scripts/             # 构建、校验、门禁自动化脚本
@@ -187,12 +186,12 @@ fasthtml-desktop/                # 仓库根
 
 ## 快速开始（给 Agent）
 
-1. **读取入口**：`SKILL.md` 定义完整工作流与铁律。
-2. **写 FastHTML 代码前**：必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
-3. **生成项目**：用 `templates/` 脚手架（`bootstrap_project.sh` / `ensure_uv_env`）初始化。
-4. **开发迭代**：FastHTML 路由 + HTMX 交互，参考 `examples/` 中与业务最接近的项目。
-5. **质量门禁**：路由联动检查 + 引用检查 + 无头 UI 验证 + `release_gate.py`。
-6. **打包**：`scripts/build_windows_exe` 产出 EXE，跨平台用 `build_cross_platform.py`。
+1. **读取入口**：`skills/fasthtml-desktop/SKILL.md` 定义完整工作流与铁律。
+2. **写 FastHTML 代码前**：必读 `skills/fasthtml-desktop/references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
+3. **生成项目**：用 `skills/fasthtml-desktop/templates/` 脚手架（`bootstrap_project.sh` / `ensure_uv_env`）初始化。
+4. **开发迭代**：FastHTML 路由 + HTMX 交互，参考 `skills/fasthtml-desktop/examples/` 中与业务最接近的项目。
+5. **质量门禁**：路由联动检查 + 引用检查 + 无头 UI 验证 + `skills/fasthtml-desktop/scripts/release_gate.py`。
+6. **打包**：`skills/fasthtml-desktop/scripts/build_windows_exe` 产出 EXE，跨平台用 `skills/fasthtml-desktop/scripts/build_cross_platform.py`。
 
 ---
 
@@ -200,17 +199,17 @@ fasthtml-desktop/                # 仓库根
 
 欢迎提交 Issue 与 PR 完善工作流。请遵循：
 
-- 改动技能核心逻辑时，同步更新 `SKILL.md`、`references/` 与 `CHANGELOG.md`
-- 新增参考实现请放入 `examples/`，并登记到 `examples/README.md`
+- 改动技能核心逻辑时，同步更新 `skills/fasthtml-desktop/SKILL.md`、`skills/fasthtml-desktop/references/` 与 `skills/fasthtml-desktop/CHANGELOG.md`
+- 新增参考实现请放入 `skills/fasthtml-desktop/examples/`，并登记到 `skills/fasthtml-desktop/examples/README.md`
 - 保持「权威文档 HARD-GATE + 质量门禁 + 跨平台构建」的铁律不被破坏
 
-详见 [contributing.md](contributing.md)。
+详见 [contributing.md](skills/fasthtml-desktop/contributing.md)。
 
 ---
 
 ## 第三方内容与合规
 
-`examples/` 目录下的参考实现**绝大多数克隆自 Predictive Labs（`predictivelabsai` 组织）的 Fast\* 系列**（代码版权归 Predictive Labs Ltd，多为 MIT），仅少数源自其他项目（`02-TrafficData` Apache、`07-genui-weather`、`08-code-assistant`）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`skills/fasthtml-desktop/examples/` 目录下的参考实现为 **FastOffice 套件 23 个项目**，均来自 Predictive Labs（`predictivelabsai` 组织）（FastERP 等 18 个项目 MIT、FastPE/FastVC/liquidround Apache-2.0、FastLegal AGPL-3.0、FastWiki 无声明）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](skills/fasthtml-desktop/THIRD_PARTY_NOTICES.md)。
 
 ---
 

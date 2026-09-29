@@ -1,0 +1,17 @@
+.git
+.github
+.env
+creds
+.env.*
+!.env.sample
+!.env.coolify.sample
+.venv
+.pytest_cache
+.ruff_cache
+.playwright-cli
+__pycache__
+*.py[cod]
+data
+output
+tests
+docs

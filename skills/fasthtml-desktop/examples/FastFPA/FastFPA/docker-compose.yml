@@ -1,0 +1,21 @@
+services:
+  fastfpa:
+    build: .
+    ports:
+      - "5018:5018"
+    environment:
+      FASTFPA_ENV: development
+      FASTFPA_PORT: "5018"
+      FASTFPA_DB: /data/fastfpa.sqlite
+      FASTFPA_SECRET: ${FASTFPA_SECRET:-local-development-only}
+      FASTOFFICE_SSO_SECRET: ${FASTOFFICE_SSO_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:5018/auth/google/callback}
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-xai}
+      MODEL_NAME: ${MODEL_NAME:-grok-4-1-fast-reasoning}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+    volumes:
+      - fastfpa-data:/data
+volumes:
+  fastfpa-data:

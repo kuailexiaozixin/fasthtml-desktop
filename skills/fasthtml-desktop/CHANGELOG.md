@@ -1,5 +1,26 @@
 # 变更记录
 
+## 1.13.0 (2026-09-29)
+
+### 修改
+- **examples/ 目录整体替换为 FastOffice 套件 23 项目**：原 20 示例（01-Bricksmith … 20-FastHelpdesk）清除；新目录为 FastOffice 套件原样迁移（FastAccounts / FastBI / FastBot / FastCLM / FastCal / FastDPS / FastDocs / FastDrive / FastERP / FastFPA / FastHRM / FastLegal / FastMail / FastMeet / FastOffice / FastPE / FastSheets / FastShop / FastSlides / FastSurvey / FastVC / FastWiki / liquidround），未做 pywebview 桌面壳、未做启动器规范改造、未做 SQLite 化，运行形态为浏览器模式 + 共享 .venv。
+- **.venv 随迁**：FastOffice\.venv → examples\.venv（Python 3.13.14）；examples 与 FastOffice 两侧 40 个启动脚本共 160 处 venv 路径重定向（examples 用相对 %~dp0..\.venv，FastOffice 指向 examples\.venv）；启动说明.md 同步。
+- **examples/README.md 按原标准重写**：定位声明 / 端口表 / 总览表（业务·技术路线·依赖·入口）/ 验证状态 / 启动器策略（现状与目标）/ 23 逐项目章节 / 跨示例可复用设计模式。
+- **迁移补全（与仓库完全一致）**：恢复迁移时排除的 `.sesskey` 与演示数据（FastBot/FastCLM/FastCal/FastHRM/FastLegal/FastOffice/FastPE/FastSurvey/liquidround 的 screenshots/output 共 112 项），examples 各项目与 FastOffice 逐文件一致（残留差异 0）。
+- **venv 依赖修复**：liquidround 核心模块（`utils/auth.py` 等 6 文件）import psycopg2，补装 psycopg2-binary 2.9.13（此前 venv_audit 卸载判断遗漏核心模块）。
+- **旧示例引用全面修正**：SKILL.md（2 处）、project-structure.md（2 处）、module-design.md（1 处）、ui-design.md 界面参照表（换为 FastERP/FastBI/FastMail/FastShop）、01-need-discovery.md、04-project-init.md；技能 README 目录树与来源段更新为 23 项目；THIRD_PARTY_NOTICES.md 重写为 23 项目许可证总表（18 MIT / 3 Apache-2.0 / FastLegal AGPL-3.0 / FastWiki 无声明）。
+- **失效工具处置**：`scripts/sync_examples.sh` 移除（针对原 01-20 上游拉取，迁移后失效）；`scripts/gen_launchers.py` 头部标注待启动器改造时重写清单；`genui-hypermedia-reference.md` 头部标注所引示例已移除。
+- **examples/README.md 重写为逐项目可借鉴要点**（v3，最终形态）：23 个项目各一节，每节「业务定位 + 3-6 条可借鉴要点（指向真实模块路径，实测核验）」，共 98 条；启动方式与端口仅出现一次（总览表）；验证状态与启动器现状/目标各一段。README 核心价值回归「可借鉴要点」，辅助信息去重。
+- **FastOffice 原目录移除**：examples 为唯一家（23 项目 + 共享 .venv + 完整数据），FastOffice 及其 `_assets\_tmp` 备份/脚本一并删除；备份信息见本条目「备份与回滚」。
+
+### 验证
+- 全量 import 20/20 通过；FastERP / FastShop / FastBot / FastWiki 真实启动 HTTP 200；启动-FastERP.bat 完整链路（相对路径解析 → 启动服务）HTTP 200。
+
+### 备份与回滚
+- 原 20 示例完整备份：`C:\Users\贺新\AppData\Roaming\WPS 灵犀\serverdir\user_skills\FastOffice\_assets\_tmp\examples_backup_20260929_221435\`（含原 README.md 与全部子目录）。
+- 迁移脚本：`FastOffice\_assets\_tmp\migrate_examples.py`（备份→清除→复制→README）。
+- 回滚：将备份目录内容复制回 examples 即可恢复迁移前状态。
+
 ## 1.12.0 (2026-09-17)
 
 ### 重构

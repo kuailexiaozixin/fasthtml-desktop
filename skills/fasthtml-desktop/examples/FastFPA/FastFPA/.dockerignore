@@ -1,0 +1,10 @@
+.git
+.venv
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+__pycache__
+.pytest_cache
+output
+docs

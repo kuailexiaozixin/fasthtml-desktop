@@ -6,7 +6,7 @@ description: >
   最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
   当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
   "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.12.0"
+version: "1.13.0"
 author: agent
 agent_created: true
 platform: multi
@@ -76,7 +76,7 @@ metadata:
   * 中等复杂度：另加 `references/02-architecture/03-module-decomposition.md`（模块分解）、`references/02-architecture/05-interface-design.md`（接口设计）、`references/02-architecture/07-scenario-driven.md`（场景驱动的架构类型选择）、`references/02-architecture/04-data-architecture.md`（数据架构）、`references/02-architecture/12-state-machine.md`（状态机）
   * 复杂企业应用：01-18 全部章节（02 核心业务流 `references/02-architecture/02-business-flow.md` / 06 统一架构框架 `references/02-architecture/06-unified-framework.md` / 08 ADR `references/02-architecture/08-adr.md` / 09 常见架构错误 `references/02-architecture/09-common-mistakes.md` / 11 架构模式选型 `references/02-architecture/11-pattern-selection.md` / 13 存储选择 `references/02-architecture/13-storage-selection.md` / 14 技术债 `references/02-architecture/14-tech-debt.md` / 15 错误处理 `references/02-architecture/15-error-handling.md` / 16 非功能设计 `references/02-architecture/16-non-functional.md` / 18 图生成指南 `references/02-architecture/18-diagram-guide.md`）
   * 界面设计活动：`references/05-coding/ui-design.md`（信息架构 / 布局决策 / CSS 框架与设计系统选型）
-* **复用**：先看 `examples/` 同类应用的架构（**分层模块化：`web/` 表示层 + 业务域包 + `db.py` 数据层，参照 `examples/04-FastERP/`**；插件化；入口壳（`templates/shared/main.py`）等），直接套用成熟范式，不重新发明。
+* **复用**：先看 `examples/` 同类应用的架构（**分层模块化：`web/` 表示层 + 业务域包 + `db.py` 数据层，参照 `examples/FastERP/`（分层在 `FastERP/FastERP/` 子目录）**；插件化；入口壳（`templates/shared/main.py`）等），直接套用成熟范式，不重新发明。
 * **铁律（架构选型：服务端渲染约束，选型前必读）**：FastHTML 是**服务端渲染**框架——HTML 由 uvicorn 按请求实时生成，**磁盘上无静态 HTML 入口文件**。
   * **禁用依赖静态 HTML 入口的工具**（注入式质检、`/live` 热重载、SSR 预渲染等）。
   * **正确路径是「真实渲染引擎」驱动**：用 pywebview 原生窗口质检与自动化（`scripts/ui_window_verify.py`、`scripts/ui_automate.py`），无需第二个浏览器；无 GUI 时用 headless HTML 审计（`scripts/ui_audit.py`）。两者都**非**解析静态 HTML。
@@ -93,7 +93,7 @@ metadata:
   数据层（SQLite / Repository / 存储）
   ```
 
-  * **模块化（业务域优先）**：按**业务域**拆分模块（如 `sales`、`purchasing`、`inventory`、`accounting`，参照 `examples/04-FastERP/fasterp/`），技术横切（auth / config / errors）为第二维度；每个模块高内聚（只做自己的事）、低耦合（模块间只经显式接口通信，禁止互相 import 内部实现）。
+  * **模块化（业务域优先）**：按**业务域**拆分模块（如 `sales`、`purchasing`、`inventory`、`accounting`，参照 `examples/FastERP/FastERP/fasterp/`），技术横切（auth / config / errors）为第二维度；每个模块高内聚（只做自己的事）、低耦合（模块间只经显式接口通信，禁止互相 import 内部实现）。
   * **关注点分离**：UI（渲染/交互）、业务逻辑、数据访问、配置读取、日志各自独立成层，禁止把 SQL 写在视图里、把业务规则写在路由里。
   * **高内聚低耦合**：一个模块/类只承担单一职责；依赖通过接口或函数注入，不产生循环依赖；公共逻辑抽到 `common/` 或 `utils/` 复用，消除 copy-paste。
   * **数据模型与状态机前置**：对数据管理型项目，架构设计的核心不是抽象分层，而是**表结构与状态流转**——表结构清单 + 状态机定义（如订单 Draft→Confirmed→Delivered→Invoiced→Closed、发票 Unpaid→Partly Paid→Paid→Overdue）列在产出物首位。数据模型定了，界面和业务函数都是它的投影（参照 FastERP：`db.py` 表结构 + 状态流转即价值重心）。
