@@ -1,6 +1,6 @@
 # 示例 / Examples
 
-> **定位**：FastHTML 重型应用范例库——FastOffice 套件 23 个可运行的企业级应用。每个项目都是参考语料，**可借鉴要点**指向真实源码位置，做自己的 FastHTML 应用时可直接抠走对应零件。
+> **定位**：FastHTML 重型应用范例库——FastOffice 套件 25 个可运行的企业级应用。每个项目都是参考语料，**可借鉴要点**指向真实源码位置，做自己的 FastHTML 应用时可直接抠走对应零件。
 
 > **运行**：双击项目根目录 `启动-<项目>.bat`，浏览器打开 `http://127.0.0.1:<端口>`（端口见总览表）；共享环境 `examples\.venv`（Python 3.13.14）。无启动脚本项目（FastCal / FastLegal / liquidround，PostgreSQL）按各自 README 配置后启动。
 
@@ -45,6 +45,28 @@
 - **提醒引擎** `fastclm/reminders.py` + **审计日志** `services/audit.py`：到期提醒、全量审计的通用实现。
 - **安全纵深** `services/malware.py`（附件恶意扫描）+ `services/retention.py`（保留策略）+ `security.py`。
 - **SCIM 与 SSO** `services/scim.py` + `auth.py`：企业身份目录对接的参考。
+
+### FastCRM
+
+> 销售 CRM：线索、看板成单管道、联系人、组织、任务、活动时间线、AI 助手。
+
+- **Frappe CRM 的 FastHTML 重写**：以服务端 HTMX 重铸成熟开源 CRM 核心域，业务建模可直接对照原版（README）。
+- **看板成单管道** `web/`：拖拽式 Kanban 状态流转的 HTMX 实现范本。
+- **SQLite 落地即用** `db.py`：`FASTCRM_DB` 环境变量驱动的单文件 SQLite（`fastcrm.sqlite`），Docker 卷挂载持久化。
+- **合成数据种子** `seed.py`：确定性合成数据（无 PII）填充演示环境，种子数据工程范例。
+- **AI 助手接活数据**：基于库内实时数据的 AI 助手，BYOK 目录（`byok/`）管理各家 LLM。
+- **验证语料** `tests/` + `swagger.json`：接口契约与测试同仓库交付。
+
+### FastDataGov
+
+> 数据治理平台：统一目录、血缘、数据质量、责任人、认证与访问申请。
+
+- **适配器契约** `fastdatagov/adapters/`（base/contract_ready/snowflake/fabric/databricks/demo/registry）：厂商中立的平台适配器层，同一公共契约下多数据平台可插拔。
+- **配置驱动** `fastdatagov/config.py`：pydantic-settings + AliasChoices（DB_URL/PORT 等）集中配置的 12-Factor 范本。
+- **仓储模式** `fastdatagov/repository.py`：数据访问收拢单一入口，`REPOSITORY_MODE` 切换后端。
+- **后台作业** `fastdatagov/jobs/` + `quality_plugins.py`：同步/质检任务的租约（lease）机制实现。
+- **合成数据** `fastdatagov/synthetic/`：演示数据生成器，与 FastCRM seed 同思路。
+- **Web 分层** `fastdatagov/web/`（routes/pages/components/api/security/auth_routes）：页面、组件、API、安全四层分离。
 
 ### FastCal
 
@@ -225,6 +247,8 @@
 | `FastBI/` | BI 分析平台：多数据源、看板图表与检索问答。 | 启动-FastBI.bat（5027） | PostgreSQL（pgvector/neo4j）；AI 问答需 LLM Key |
 | `FastBot/` | AI 机器人：多轮 agent、工具调用与浏览器自动化。 | 启动-FastBot.bat（5028） | AI 需 LLM Key；浏览器自动化需 playwright |
 | `FastCLM/` | 合同生命周期管理：起草、审批、签署、归档、提醒。 | 启动-FastCLM.bat（5029） | PostgreSQL；S3 可选 |
+| `FastCRM/` | 销售 CRM：线索、看板管道、联系人、任务、AI 助手。 | 启动-FastCRM.bat（5006） | 离线可用（SQLite）；AI 需 LLM Key（BYOK） |
+| `FastDataGov/` | 数据治理：统一目录、血缘、质量、认证、访问申请。 | 启动-FastDataGov.bat（5062） | 默认演示模式；PostgreSQL 需配 DB_URL / REPOSITORY_MODE=postgres |
 | `FastCal/` | 团队日历：轮询调度、时区安全、冲突预防。 | 无启动脚本，见项目 README | PostgreSQL（SQLAlchemy）；Google 日历集成 |
 | `FastDPS/` | 文档处理服务：上传、转换、分发、审批管道。 | 启动-FastDPS.bat（5030） | PostgreSQL |
 | `FastDocs/` | 文档编辑器：文档库、块编辑、模板、版本历史、AI 写作。 | 启动-FastDocs.bat（5016） | 离线可用；AI 写作需 LLM Key |
@@ -245,13 +269,5 @@
 | `FastWiki/` | 知识库：空间、页面、权限、附件、AI 问答。 | 启动-FastWiki.bat（5022） | AI 问答需 LLM Key |
 | `liquidround/` | AI ECM Agent Squad：多智能体编排、金融数据管道。 | 无启动脚本，见项目 README | 需 LLM Key（XAI/OpenAI 至少其一）；PostgreSQL |
 
-## 验证状态（2026-09-29 实测）
-
-- 全量 import **20/20**；FastERP / FastShop / FastBot / FastWiki 真实启动 **HTTP 200**；`启动-FastERP.bat` 完整链路 HTTP 200
-- 各项目与 FastOffice 仓库**逐文件一致**（含演示数据与 `.sesskey`）；缺 LLM Key 时页面可开、对应 AI 功能报错（非缺陷）
-
-## 启动器现状与目标
-
-> **当前（过渡态）**：`启动-<项目>.bat` + 共享 `examples\.venv`（浏览器模式）。**目标**：接入 examples 规范启动器（`scripts/gen_launchers.py` 统一分发 launcher.py、launcher.json 管差异）、目录编号化、补 pywebview 桌面壳、PG 项目 SQLite 化。过渡态与目标策略相反，改造完成前勿复制为最终范式。
 
 > 变更历史见技能根 `CHANGELOG.md`。

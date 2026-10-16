@@ -15,7 +15,7 @@
 
 - **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
 - **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
-- **23 个参考实现**：`examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务等真实业务场景）
+- **25 个参考实现**：`examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务、CRM、数据治理等真实业务场景）
 - **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
 - **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
 
@@ -164,7 +164,7 @@ fasthtml-desktop/                # 仓库根
 │       │   ├── 07-quality-gate/ # ⑦ 质量门禁（Check/Test/Debug 三层）
 │       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台 + 7 子专题）
 │       │   └── ...
-│       ├── examples/            # 23 个参考实现（FastOffice 套件，优先参考）
+│       ├── examples/            # 25 个参考实现（FastOffice 套件，优先参考）
 │       │   ├── FastERP          # ERP（订单到收款/采购到付款/会计引擎）
 │       │   ├── FastAccounts     # 财务总账（复式记账）
 │       │   ├── FastBI           # BI 分析平台（RAG 问答）
@@ -209,7 +209,7 @@ fasthtml-desktop/                # 仓库根
 
 ## 第三方内容与合规
 
-`examples/` 目录下的参考实现为 **FastOffice 套件 23 个项目**，均来自 Predictive Labs（`predictivelabsai` 组织）（FastERP 等 18 个项目 MIT、FastPE/FastVC/liquidround Apache-2.0、FastLegal AGPL-3.0、FastWiki 无声明）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`examples/` 目录下的参考实现为 **FastOffice 套件 25 个项目**，均来自 Predictive Labs（`predictivelabsai` 组织）（FastERP 等 20 个项目 MIT、FastPE/FastVC/liquidround Apache-2.0、FastLegal AGPL-3.0、FastWiki 无声明）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
 

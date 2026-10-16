@@ -1,5 +1,13 @@
 # 变更记录
 
+## 1.14.0 (2026-10-16)
+
+### 新增
+- **examples/ 新增 2 个参考实现（23 → 25）**：`FastCRM/`（销售 CRM，端口 5006，SQLite 离线可用，AI 助手 BYOK）与 `FastDataGov/`（数据治理平台，端口 5062，PostgreSQL，多数据平台适配器）。两者均来自 Predictive Labs（`predictivelabsai`），MIT 许可。
+- **examples/README.md 登记**：新增两项目「可借鉴要点」章节（FastCRM 6 条 / FastDataGov 6 条）与总览表行（无启动脚本，`python web_app.py` / `python main.py` 入口）。
+- **README.md**：参考实现计数 23 → 25（3 处），来源段 MIT 项目数 18 → 20，业务场景补充 CRM、数据治理。
+- **THIRD_PARTY_NOTICES.md**：MIT 许可列表并入 FastCRM / FastDataGov。
+
 ## 1.13.0 (2026-09-29)
 
 ### 修改

@@ -10,7 +10,7 @@
 
 | 项目 | 许可证 | 说明 |
 |------|--------|------|
-| FastAccounts / FastBI / FastBot / FastCLM / FastCal / FastDPS / FastDocs / FastDrive / FastHRM / FastMail / FastMeet / FastOffice / FastSheets / FastShop / FastSlides / FastSurvey | **MIT** | 项目根 `LICENSE` |
+| FastAccounts / FastBI / FastBot / FastCLM / FastCal / FastCRM / FastDataGov / FastDPS / FastDocs / FastDrive / FastHRM / FastMail / FastMeet / FastOffice / FastSheets / FastShop / FastSlides / FastSurvey | **MIT** | 项目根 `LICENSE` |
 | FastERP / FastFPA | **MIT** | 许可证位于内层 `FastERP/FastERP/LICENSE`、`FastFPA/FastFPA/LICENSE`（嵌套布局） |
 | FastPE / FastVC / liquidround | **Apache-2.0** | 项目根 `LICENSE` |
 | FastLegal | **AGPL-3.0** | 项目根 `LICENSE`（GNU Affero GPL v3） |

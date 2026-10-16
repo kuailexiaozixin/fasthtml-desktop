@@ -1,5 +1,34 @@
 # 变更记录
 
+## 1.14.0 (2026-10-16)
+
+### 新增
+- **examples/ 新增 2 个参考实现（23 → 25）**：`FastCRM/`（销售 CRM，端口 5006，SQLite 离线可用，AI 助手 BYOK）与 `FastDataGov/`（数据治理平台，端口 5062，PostgreSQL，多数据平台适配器）。两者均来自 Predictive Labs（`predictivelabsai`），MIT 许可。
+- **examples/README.md 登记**：新增两项目「可借鉴要点」章节（FastCRM 6 条 / FastDataGov 6 条）与总览表行（无启动脚本，`python web_app.py` / `python main.py` 入口）。
+- **README.md**：参考实现计数 23 → 25（3 处），来源段 MIT 项目数 18 → 20，业务场景补充 CRM、数据治理。
+- **THIRD_PARTY_NOTICES.md**：MIT 许可列表并入 FastCRM / FastDataGov。
+
+## 1.13.0 (2026-09-29)
+
+### 修改
+- **examples/ 目录整体替换为 FastOffice 套件 23 项目**：原 20 示例（01-Bricksmith … 20-FastHelpdesk）清除；新目录为 FastOffice 套件原样迁移（FastAccounts / FastBI / FastBot / FastCLM / FastCal / FastDPS / FastDocs / FastDrive / FastERP / FastFPA / FastHRM / FastLegal / FastMail / FastMeet / FastOffice / FastPE / FastSheets / FastShop / FastSlides / FastSurvey / FastVC / FastWiki / liquidround），未做 pywebview 桌面壳、未做启动器规范改造、未做 SQLite 化，运行形态为浏览器模式 + 共享 .venv。
+- **.venv 随迁**：FastOffice\.venv → examples\.venv（Python 3.13.14）；examples 与 FastOffice 两侧 40 个启动脚本共 160 处 venv 路径重定向（examples 用相对 %~dp0..\.venv，FastOffice 指向 examples\.venv）；启动说明.md 同步。
+- **examples/README.md 按原标准重写**：定位声明 / 端口表 / 总览表（业务·技术路线·依赖·入口）/ 验证状态 / 启动器策略（现状与目标）/ 23 逐项目章节 / 跨示例可复用设计模式。
+- **迁移补全（与仓库完全一致）**：恢复迁移时排除的 `.sesskey` 与演示数据（FastBot/FastCLM/FastCal/FastHRM/FastLegal/FastOffice/FastPE/FastSurvey/liquidround 的 screenshots/output 共 112 项），examples 各项目与 FastOffice 逐文件一致（残留差异 0）。
+- **venv 依赖修复**：liquidround 核心模块（`utils/auth.py` 等 6 文件）import psycopg2，补装 psycopg2-binary 2.9.13（此前 venv_audit 卸载判断遗漏核心模块）。
+- **旧示例引用全面修正**：SKILL.md（2 处）、project-structure.md（2 处）、module-design.md（1 处）、ui-design.md 界面参照表（换为 FastERP/FastBI/FastMail/FastShop）、01-need-discovery.md、04-project-init.md；技能 README 目录树与来源段更新为 23 项目；THIRD_PARTY_NOTICES.md 重写为 23 项目许可证总表（18 MIT / 3 Apache-2.0 / FastLegal AGPL-3.0 / FastWiki 无声明）。
+- **失效工具处置**：`scripts/sync_examples.sh` 移除（针对原 01-20 上游拉取，迁移后失效）；`scripts/gen_launchers.py` 头部标注待启动器改造时重写清单；`genui-hypermedia-reference.md` 头部标注所引示例已移除。
+- **examples/README.md 重写为逐项目可借鉴要点**（v3，最终形态）：23 个项目各一节，每节「业务定位 + 3-6 条可借鉴要点（指向真实模块路径，实测核验）」，共 98 条；启动方式与端口仅出现一次（总览表）；验证状态与启动器现状/目标各一段。README 核心价值回归「可借鉴要点」，辅助信息去重。
+- **FastOffice 原目录移除**：examples 为唯一家（23 项目 + 共享 .venv + 完整数据），FastOffice 及其 `_assets\_tmp` 备份/脚本一并删除；备份信息见本条目「备份与回滚」。
+
+### 验证
+- 全量 import 20/20 通过；FastERP / FastShop / FastBot / FastWiki 真实启动 HTTP 200；启动-FastERP.bat 完整链路（相对路径解析 → 启动服务）HTTP 200。
+
+### 备份与回滚
+- 原 20 示例完整备份：`C:\Users\贺新\AppData\Roaming\WPS 灵犀\serverdir\user_skills\FastOffice\_assets\_tmp\examples_backup_20260929_221435\`（含原 README.md 与全部子目录）。
+- 迁移脚本：`FastOffice\_assets\_tmp\migrate_examples.py`（备份→清除→复制→README）。
+- 回滚：将备份目录内容复制回 examples 即可恢复迁移前状态。
+
 ## 1.12.0 (2026-09-17)
 
 ### 重构
@@ -66,22 +95,25 @@ eferences/launch-standard-deliverable.md 章节与条目统一编号：顶层章
 ## 1.9.0 (2026-09-01)
 
 ### 重构
-- **SKILL.md「完整工作流」与「分步执行详解」合并为单一连续章节**：解决 LLM 读完工作流清单后略过详解的问题。每步（①→⑨）统一正文段落呈现，内联必读参考/复用要点/产出物/验收标准，须读完整步再执行，不得跳过任一字段。
+- **SKILL.md「完整工作流」与「分步执行详解」合并为单一连续章节**：解决 LLM 在执行技能时读完「完整工作流（最低执行清单）」后即直接执行、略过/跳过分步执行详解的问题。现在每个步骤（①→⑨）统一以正文段落呈现，内联**必读参考、复用要点、产出物、验收标准**，须读完并执行完本步骤全部内容后再进入下一步，不得跳过任一字段。
 
 ## 1.8.0 (2026-08-31)
 
 ### 新增
-- **代码与结构原则新增「TDD 铁律（测试驱动开发，必须）」章节**：红-绿-重构循环、核心原则（测试先行/小步快跑/测试即文档/回归保障）、好处，并与工作流衔接（test-first、Prove-It、pytest 只管逻辑、全量 pytest+HTML 审计非零即阻断）。
+- **代码与结构原则新增「TDD 铁律（测试驱动开发，必须）」章节**：明确红-绿-重构循环（Red→写失败测试 / Green→写最少代码让测试通过 / Refactor→优化结构且测试仍全绿）、核心原则（测试先行 / 小步快跑 / 测试即文档 / 回归保障）、好处（代码质量 / 设计更优 / 减少调试 / 重构有信心 / 需求清晰），并与本技能工作流衔接：test-first、Prove-It、pytest 只管逻辑、全量 pytest+HTML 审计非零即阻断。
 
 ### 重构
-- **SKILL.md「工作流融合」重构**：删除独立路由章节与产出物清单表，五目录参考文件及产出物/验收标准全部内联到工作流 ①→⑨ 步骤（新增「分步执行详解」小节），以工作流为唯一可靠主线。
+- **SKILL.md「工作流融合」重构**：删除独立的「目录结构与主题路由」路由章节与「各步骤产出物清单」表格（路由表/清单表易分叉、易被略过），将五目录参考文件（`architecture/` 18 章、`fasthtml-refs/` 4 文件、`packaging/` 8 文件、`pywebview-examples/` 59 脚本、`09-Check&Test&Debug/` 12 文件）的「文件→用途→查阅时机」及产出物/验收标准**全部内联到工作流 ①→⑨ 对应步骤**（新增「分步执行详解」小节），以工作流为唯一可靠主线。
 
 ## 1.7.0 (2026-08-30)
 
 ### 新增
 - **架构分层铁律（表示层-业务层-数据层）**：SKILL.md 新增"代码与结构原则 > 架构分层"章节，明确三层分层、依赖单向自上而下、禁止跨层调用；强调模块化、关注点分离、高内聚低耦合。
-- `references/05-project-structure.md` 新增"架构分层与模块化"章节：三层职责、模块化拆包、数据访问收敛 Repository 模式。
+- `references/05-project-structure.md` 新增"架构分层与模块化"章节：三层职责、模块化拆包（auth/billing/report）、数据访问收敛 Repository 模式。
 - 强化 `references/architecture/INDEX.md` 与各架构章节，统一架构分层表达。
+
+### 修改
+- 更新 `SKILL.md`：架构分层铁律指向 `references/05-project-structure.md`、`references/architecture/INDEX.md`、`references/02-module-design.md`。
 
 ### 清理
 - 移除 `references/fasthtml-refs/` 下无许可证声明的第三方 llms 上下文文件（`faststrap-llms.txt`、`monsterui-llms-ctx.txt`），保持合规。
