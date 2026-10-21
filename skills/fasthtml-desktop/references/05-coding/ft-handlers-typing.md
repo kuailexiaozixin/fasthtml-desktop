@@ -2,7 +2,7 @@
 
 > 在 `fasthtml-desktop` 工作流的 ⑥ 编码步骤中使用。本文档系统化 FastHTML 的参数绑定规则，防止 AI 写出签名错误导致静默失效的处理函数。
 
-**权威源**：`fasthtml-refs/fasthtml-llms-ctx.txt`（本文所有规则均以该文件为准，不含外部技能私货）。
+**权威源**：`fasthtml-refs/fasthtml-llms-ctx-full.txt`（本文所有规则均以该文件为准，不含外部技能私货）。
 
 ---
 

@@ -21,7 +21,7 @@
 2. 改动技能核心逻辑时，**同步更新** `SKILL.md`、相关 `references/` 与 `CHANGELOG.md`。
 3. 新增参考实现放入 `examples/`，并登记到 `examples/README.md`。
 4. 保持三条铁律不被破坏：
-   - 写 FastHTML 代码前必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE）
+   - 写 FastHTML 代码前必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`（HARD-GATE）
    - 质量门禁（路由联动检查 + 引用检查 + 无头 UI 验证）必须通过
    - 跨平台构建脚本保持可用（Win/macOS/Linux）
 5. 提交信息简洁清晰，描述改动意图。

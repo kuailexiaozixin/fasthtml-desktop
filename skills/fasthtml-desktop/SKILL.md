@@ -6,7 +6,7 @@ description: >
   最终交付物是包含 pywebview 原生窗口的 FastHTML 桌面 EXE（WebView2 渲染，本地 HTTP 服务）。
   当用户提到"fasthtml""pywebview""Web 桌面""HTMX 界面""本地 HTTP 服务"
   "带原生窗口的 Web 应用""pywebview 打包"时使用本技能。
-version: "1.13.0"
+version: "1.14.1"
 author: agent
 agent_created: true
 platform: multi
@@ -26,9 +26,9 @@ metadata:
 
 ***
 
-## HARD-GATE：必须先读 fasthtml-llms-ctx.txt（不可跳过）
+## HARD-GATE：必须先读 fasthtml-llms-ctx-full.txt（不可跳过）
 
-**写任何 FastHTML 代码前，必须先读** **`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`。**
+**写任何 FastHTML 代码前，必须先读** **`references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`。**
 
 该文件是 FastHTML 官方 LLMs 上下文文件（约 10,100 行），覆盖所有 API 签名、路由模式、FastTags、HTMX 集成等。**写任何代码前必须阅读**，阅读后聚焦本任务相关的关键结论、API 签名/组件、以及与 FastAPI 的语法差异；否则 API 使用错误、组件属性遗漏、路径映射失败。
 
@@ -140,7 +140,7 @@ metadata:
 ### ⑤ 编码
 
 * **任务**：按 ② 的分层骨架与接口契约编码，**界面与业务一体实现**——服务端渲染下"界面"即路由函数返回的 HTML 片段（如 `views.order_detail(oid)` 同时是界面与业务出口）；按 ② 的页面结构清单与设计系统实现布局与组件；最小可运行版本先行（先跑通空壳确认技术栈兼容，再加业务）；`src/main.py` 不动（pywebview + uvicorn 入口）。**不制作独立纯界面原型文件**。
-* **必读（前置）**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（FastHTML 官方 LLMs 上下文，写任何代码前必读）；`references/05-coding/execution-and-env.md`（编码与执行规范：PowerShell 红线 / 编码铁律 / 命令超时 / 修改后验证纪律）；`references/05-coding/ft-handlers-typing.md`（参数绑定规则）；`references/05-coding/integration-patterns.md`（fasthtml+pywebview+PyInstaller 协同）。
+* **必读（前置）**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`（FastHTML 官方 LLMs 上下文，写任何代码前必读）；`references/05-coding/execution-and-env.md`（编码与执行规范：PowerShell 红线 / 编码铁律 / 命令超时 / 修改后验证纪律）；`references/05-coding/ft-handlers-typing.md`（参数绑定规则）；`references/05-coding/integration-patterns.md`（fasthtml+pywebview+PyInstaller 协同）。
 * **必读（按需）**：
   * `references/05-coding/ui-design.md`（界面实现：布局模板、CSS 框架选型、交互位置标注、图标处理）
   * `references/05-coding/project-structure.md`（分层模块化标准结构：web/ + 业务域包 + db.py）

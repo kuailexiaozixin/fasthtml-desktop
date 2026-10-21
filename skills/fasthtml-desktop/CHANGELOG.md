@@ -1,5 +1,12 @@
 # 变更记录
 
+
+## 1.14.1 (2026-10-21)
+
+### 变更
+- **参考文档更名**：`fasthtml-llms-ctx.txt` → `fasthtml-llms-ctx-full.txt`，与官方 https://www.fastht.ml/docs/llms-ctx-full.txt 命名对齐。
+- **参考文档内容同步**：更新为官方最新全量版（364,799 字节），含顶部 21 条文档索引、HTMX 配置项补充、MonsterUI API 更新（FrankenRenderer/ScrollSpy/LoaderButton/ToggleBtn 等）。
+- **引用更新**：SKILL.md / README.md / contributing.md / INDEX.md / ft-handlers-typing.md 共 8 处引用同步更名。
 ## 1.14.0 (2026-10-16)
 
 ### 新增

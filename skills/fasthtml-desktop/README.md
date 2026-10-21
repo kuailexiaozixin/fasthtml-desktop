@@ -14,7 +14,7 @@
 本技能为 AI Agent 提供一套**标准化、可复现**的 FastHTML 桌面应用开发流程，用 Web 技术栈做出带原生窗口的桌面程序：
 
 - **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
-- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（约 1 万行官方上下文）为写码前必读
+- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`（约 1 万行官方上下文）为写码前必读
 - **25 个参考实现**：`examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务、CRM、数据治理等真实业务场景）
 - **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
 - **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
@@ -187,7 +187,7 @@ fasthtml-desktop/                # 仓库根
 ## 快速开始（给 Agent）
 
 1. **读取入口**：`SKILL.md` 定义完整工作流与铁律。
-2. **写 FastHTML 代码前**：必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
+2. **写 FastHTML 代码前**：必读 `references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`（HARD-GATE），注意与 FastAPI 的语法差异。
 3. **生成项目**：用 `templates/` 脚手架（`bootstrap_project.sh` / `ensure_uv_env`）初始化。
 4. **开发迭代**：FastHTML 路由 + HTMX 交互，参考 `examples/` 中与业务最接近的项目。
 5. **质量门禁**：路由联动检查 + 引用检查 + 无头 UI 验证 + `release_gate.py`。

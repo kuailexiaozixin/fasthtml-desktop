@@ -6,7 +6,7 @@
 
 | 文件 | 内容 |
 |------|------|
-| `fasthtml-refs/fasthtml-llms-ctx.txt` | FastHTML 官方 LLMs 上下文，**写任何代码前必读** |
+| `fasthtml-refs/fasthtml-llms-ctx-full.txt` | FastHTML 官方 LLMs 上下文，**写任何代码前必读** |
 | `execution-and-env.md` | 编码与执行规范：PowerShell 5.1 红线 / 源码编码铁律 / 命令执行与超时 / 修改后验证纪律 |
 | `ft-handlers-typing.md` | FastHTML 参数绑定规则 |
 | `integration-patterns.md` | fasthtml + pywebview + PyInstaller 协同模式 |
