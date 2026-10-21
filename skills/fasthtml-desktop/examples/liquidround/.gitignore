@@ -229,3 +229,6 @@ data/sec_13f/
 data/ee_companies.json
 data/lt_companies.json
 data/lv_companies.json
+
+# Exception: reference screenshots for docs/user_guide.md (Reverse Mergers feature)
+!static/img/reverse-mergers-*.png

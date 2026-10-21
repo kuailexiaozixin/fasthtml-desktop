@@ -1,6 +1,21 @@
 # 变更记录
 
 
+## 1.14.2 (2026-10-21)
+
+### 修复
+- **补齐漏上传的 3 张 liquidround 截图**（v1.10.0 同步时遗漏）：`reverse-mergers-overview-desktop.png`（修复 user_guide.md 第 180 行失效图片链接）、`reverse-mergers-spac-comparison-desktop.png`、`reverse-mergers-canadian-import-mobile.png`。
+
+## 1.14.2 (2026-10-21)
+
+### 修复
+- **补齐漏上传的 3 张 liquidround 截图**（v1.10.0 同步时遗漏）：`reverse-mergers-overview-desktop.png`（修复 user_guide.md 第 180 行失效图片链接）、`reverse-mergers-spac-comparison-desktop.png`、`reverse-mergers-canadian-import-mobile.png`。
+
+## 1.14.2 (2026-10-21)
+
+### 修复
+- **补齐漏上传的 3 张 liquidround 截图**（v1.10.0 同步时遗漏）：`reverse-mergers-overview-desktop.png`（修复 user_guide.md 第 180 行失效图片链接）、`reverse-mergers-spac-comparison-desktop.png`、`reverse-mergers-canadian-import-mobile.png`。
+
 ## 1.14.1 (2026-10-21)
 
 ### 变更
