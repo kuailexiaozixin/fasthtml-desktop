@@ -17,5 +17,11 @@
 - [ ] Agent 等外部集成模块未导入 fasthtml
 - [ ] CSS/JS 已内联
 - [ ] 路径代码使用了 sys.frozen 检测
+- [ ] SOLID 五大设计原则
+  - [ ] 单一职责原则（Single Responsibility Principle，SRP）：一个模块/类只承担单一职责，只做一件事
+  - [ ] 开放-闭合原则（Open-Closed Principle，OCP）：确保系统行为的修改可通过新增代码实现，而非修改现有代码
+  - [ ] 里氏替换原则（Liskov Substitution Principle，LSP）：要构建由可互换组件组成的软件系统，组件必须遵循统一契约，确保可相互替换
+  - [ ] 接口分离原则（Interface Segregation Principle，ISP）：不强迫客户端依赖它用不到的方法，接口小而专
+  - [ ] 依赖倒置原则（Dependency Inversion Principle，DIP）：实现高层级策略的代码不应依赖实现低层级细节的代码；相反，低层级细节应依赖高层级策略
 
 ---
