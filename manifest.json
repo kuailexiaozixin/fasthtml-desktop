@@ -1,0 +1,237 @@
+﻿{
+  "org": "predictivelabsai",
+  "examples_dir": "examples",
+  "venv": {
+    "dir": "examples/.venv",
+    "shared": true,
+    "python": "D:/Python/cpython-3.13.14-windows-x86_64-none/python.exe",
+    "_note": "共享最小 venv；依赖变化时对合并后的依赖清单做哈希比对，变化则重装"
+  },
+  "exclude": {
+    "mandatory": [
+      "output/",
+      ".impeccable/",
+      "__pycache__/",
+      "node_modules/",
+      "dist/",
+      ".git/",
+      "*.pyc"
+    ],
+    "media": [
+      "docs/*.pdf",
+      "docs/*.pptx",
+      "docs/*.gif",
+      "docs/*.mp4",
+      "screenshots/"
+    ],
+    "_note": "mandatory 必排（纯工具/测试/缓存产物）；media 建议排（参考媒体，深度清理时启用）；data/ *.sqlite static/ 保留（可运行资产）"
+  },
+  "keep": [
+    "启动-*.bat",
+    ".venv"
+  ],
+  "sources": [
+    {
+      "id": "FastAccounts",
+      "repo": "predictivelabsai/FastAccounts",
+      "ref": "main",
+      "local_dir": "examples/FastAccounts",
+      "pinned_sha": "a0b98d29427e",
+      "license": "MIT"
+    },
+    {
+      "id": "FastBI",
+      "repo": "predictivelabsai/FastBI",
+      "ref": "main",
+      "local_dir": "examples/FastBI",
+      "pinned_sha": "c37ebf64fb95",
+      "license": "MIT"
+    },
+    {
+      "id": "FastBot",
+      "repo": "predictivelabsai/FastBot",
+      "ref": "main",
+      "local_dir": "examples/FastBot",
+      "pinned_sha": "7b54ccca70e9",
+      "license": "MIT"
+    },
+    {
+      "id": "FastCal",
+      "repo": "predictivelabsai/FastCal",
+      "ref": "main",
+      "local_dir": "examples/FastCal",
+      "pinned_sha": "e190917bb39b",
+      "license": "MIT",
+      "db_required": true
+    },
+    {
+      "id": "FastCLM",
+      "repo": "predictivelabsai/FastCLM",
+      "ref": "main",
+      "local_dir": "examples/FastCLM",
+      "pinned_sha": "ae07e77a6db6",
+      "license": "MIT"
+    },
+    {
+      "id": "FastCRM",
+      "repo": "predictivelabsai/FastCRM",
+      "ref": "main",
+      "local_dir": "examples/FastCRM",
+      "pinned_sha": "061e5068d6ef",
+      "license": "MIT"
+    },
+    {
+      "id": "FastDataGov",
+      "repo": "predictivelabsai/FastDataGov",
+      "ref": "main",
+      "local_dir": "examples/FastDataGov",
+      "pinned_sha": "c465e7861d0b",
+      "license": "MIT"
+    },
+    {
+      "id": "FastDPS",
+      "repo": "predictivelabsai/FastDPS",
+      "ref": "main",
+      "local_dir": "examples/FastDPS",
+      "pinned_sha": "e4e1c9d5d36a",
+      "license": "MIT"
+    },
+    {
+      "id": "FastDocs",
+      "repo": "predictivelabsai/FastDocs",
+      "ref": "main",
+      "local_dir": "examples/FastDocs",
+      "pinned_sha": "96b627b9e902",
+      "license": "MIT"
+    },
+    {
+      "id": "FastDrive",
+      "repo": "predictivelabsai/FastDrive",
+      "ref": "main",
+      "local_dir": "examples/FastDrive",
+      "pinned_sha": "5ca5446671c4",
+      "license": "MIT"
+    },
+    {
+      "id": "FastERP",
+      "repo": "predictivelabsai/FastERP",
+      "ref": "main",
+      "local_dir": "examples/FastERP",
+      "pinned_sha": "4310b46d7154",
+      "license": "MIT"
+    },
+    {
+      "id": "FastFPA",
+      "repo": "predictivelabsai/FastFPA",
+      "ref": "main",
+      "local_dir": "examples/FastFPA",
+      "pinned_sha": "dfed6dd4f5a6",
+      "license": "MIT"
+    },
+    {
+      "id": "FastHRM",
+      "repo": "predictivelabsai/FastHRM",
+      "ref": "main",
+      "local_dir": "examples/FastHRM",
+      "pinned_sha": "7e23b9835bce",
+      "license": "MIT"
+    },
+    {
+      "id": "FastLegal",
+      "repo": "predictivelabsai/FastLegal",
+      "ref": "main",
+      "local_dir": "examples/FastLegal",
+      "pinned_sha": "4166e88f72ea",
+      "license": "AGPL-3.0",
+      "db_required": true
+    },
+    {
+      "id": "FastMail",
+      "repo": "predictivelabsai/FastMail",
+      "ref": "main",
+      "local_dir": "examples/FastMail",
+      "pinned_sha": "85bd586ab1d9",
+      "license": "MIT"
+    },
+    {
+      "id": "FastMeet",
+      "repo": "predictivelabsai/FastMeet",
+      "ref": "main",
+      "local_dir": "examples/FastMeet",
+      "pinned_sha": "74d24d5bc9fa",
+      "license": "MIT"
+    },
+    {
+      "id": "FastOffice",
+      "repo": "predictivelabsai/FastOffice",
+      "ref": "main",
+      "local_dir": "examples/FastOffice",
+      "pinned_sha": "636552318d68",
+      "license": "MIT"
+    },
+    {
+      "id": "FastSheets",
+      "repo": "predictivelabsai/FastSheets",
+      "ref": "main",
+      "local_dir": "examples/FastSheets",
+      "pinned_sha": "c61a9c8cf625",
+      "license": "MIT"
+    },
+    {
+      "id": "FastShop",
+      "repo": "predictivelabsai/FastShop",
+      "ref": "main",
+      "local_dir": "examples/FastShop",
+      "pinned_sha": "2c86f8be0a06",
+      "license": "MIT"
+    },
+    {
+      "id": "FastSlides",
+      "repo": "predictivelabsai/FastSlides",
+      "ref": "main",
+      "local_dir": "examples/FastSlides",
+      "pinned_sha": "93d5ec0ac8ef",
+      "license": "MIT"
+    },
+    {
+      "id": "FastSurvey",
+      "repo": "predictivelabsai/FastSurvey",
+      "ref": "main",
+      "local_dir": "examples/FastSurvey",
+      "pinned_sha": "c668e6807402",
+      "license": "MIT"
+    },
+    {
+      "id": "FastVC",
+      "repo": "predictivelabsai/FastVC",
+      "ref": "main",
+      "local_dir": "examples/FastVC",
+      "pinned_sha": "1cd8f8a60d8b",
+      "license": "Apache-2.0"
+    },
+    {
+      "id": "FastWiki",
+      "repo": "predictivelabsai/FastWiki",
+      "ref": "main",
+      "local_dir": "examples/FastWiki",
+      "pinned_sha": "5fee8b9344d7",
+      "license": "UNLICENSED"
+    },
+    {
+      "id": "FastFactoring",
+      "repo": "predictivelabsai/FastFactoring",
+      "ref": "main",
+      "local_dir": "examples/FastFactoring",
+      "pinned_sha": "d19a1b5e35cb",
+      "license": "MIT"
+    },
+    {
+      "id": "FastCMS",
+      "repo": "predictivelabsai/FastCMS",
+      "ref": "main",
+      "local_dir": "examples/FastCMS",
+      "pinned_sha": "088d0449fcd3",
+      "license": "MIT"
+    }
+  ]
+}

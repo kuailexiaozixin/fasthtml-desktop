@@ -1,1 +1,0 @@
-"""FastDocs web package."""
