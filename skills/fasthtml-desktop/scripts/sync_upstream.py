@@ -369,6 +369,38 @@ def migrate_bats(sources):
         print(f"  [bat] 迁移 {migrated} 个已有 bat（添加 preflight）")
 
 
+
+def sync_web_files(check: bool = False) -> None:
+    """同步 manifest.web_files 中的远程文件（如 fasthtml LLM 上下文）到本地。"""
+    web_files = CFG.get("web_files", [])
+    if not web_files:
+        return
+    import urllib.request
+    for wf in web_files:
+        local_path = SKILL_ROOT / wf["local_path"]
+        pinned = wf.get("pinned_sha", "")
+        try:
+            req = urllib.request.Request(wf["url"], headers={"User-Agent": "sync_upstream/1.0"})
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                data = resp.read()
+        except Exception as e:
+            print(f"  [web] {wf['id']}: 下载失败 ({e})")
+            continue
+        # 行尾归一化（本地 Windows 可能 CRLF，远程 LF）
+        data_lf = data.replace(b"\r\n", b"\n")
+        remote_sha = hashlib.sha256(data_lf).hexdigest()[:12]
+        if check:
+            status = "已是最新" if remote_sha == pinned else f"有更新（{pinned} -> {remote_sha}）"
+            print(f"[check] web:{wf['id']}: {status}")
+            continue
+        if remote_sha != pinned:
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            local_path.write_bytes(data_lf)  # 写 LF 版本（git autocrlf 会转 CRLF）
+            wf["pinned_sha"] = remote_sha
+            print(f"  [web] {wf['id']}: 已更新（{pinned} -> {remote_sha}, {len(data)} bytes）")
+        else:
+            print(f"  [web] {wf['id']}: 已是最新")
+
 def main() -> int:
     args = sys.argv[1:]
     check = "--check" in args
@@ -406,6 +438,9 @@ def main() -> int:
             src["pinned_sha"] = head
         stats["updated"].append(vid)
         print(f"  [{vid}] 已更新（{ch}）：清产物 {freed/1e6:.1f}MB/{removed} 项 → {src['local_dir']}")
+    # web_files 同步
+    sync_web_files(check=check)
+
     if not check:
         MANIFEST.write_text(json.dumps(CFG, ensure_ascii=False, indent=2) + "\n", encoding="utf-8-sig")
         ensure_venv(sources)

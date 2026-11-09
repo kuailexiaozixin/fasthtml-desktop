@@ -233,5 +233,14 @@
       "pinned_sha": "088d0449fcd3",
       "license": "MIT"
     }
+  ],
+  "web_files": [
+    {
+      "id": "fasthtml-llms-ctx-full",
+      "url": "https://fastht.ml/docs/llms-ctx-full.txt",
+      "local_path": "references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt",
+      "pinned_sha": "e0c5197cb3b3",
+      "note": "FastHTML 官方 LLM 上下文文档；sync_upstream --check 时 curl 获取并比对 SHA"
+    }
   ]
 }
