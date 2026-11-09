@@ -1,58 +1,52 @@
-# macOS system files
+# macOS
 .DS_Store
 
-# Python bytecode
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+.venv/
+venv/
+*.sqlite
+*.sqlite3
 
 # Editor
 .idea/
 .vscode/
 
-# Build artifacts
+# Build
 dist/
 build/
 *.spec
-
-# Logs
 *.log
 
-# Local venv
-.venv/
-venv/
-
-# 运行时数据库
-*.sqlite
-*.sqlite3
-
-# examples: 25 个上游快照目录（体积大，不入仓库；由 sync_upstream.py --ensure 自动拉取）
-examples/FastAccounts/
-examples/FastBI/
-examples/FastBot/
-examples/FastCal/
-examples/FastCLM/
-examples/FastCMS/
-examples/FastCRM/
-examples/FastDPS/
-examples/FastDataGov/
-examples/FastDocs/
-examples/FastDrive/
-examples/FastERP/
-examples/FastFPA/
-examples/FastFactoring/
-examples/FastHRM/
-examples/FastLegal/
-examples/FastMail/
-examples/FastMeet/
-examples/FastOffice/
-examples/FastSheets/
-examples/FastShop/
-examples/FastSlides/
-examples/FastSurvey/
-examples/FastVC/
-examples/FastWiki/
-
-# 共享 venv（被 .gitignore 的 .venv/ 规则已覆盖，显式再写一次）
-examples/.venv/
+# 备份目录
 .backup_*/
+
+# examples: 25 个上游快照（体积大，由 sync_upstream.py --ensure 自动拉取）
+skills/fasthtml-desktop/examples/FastAccounts/
+skills/fasthtml-desktop/examples/FastBI/
+skills/fasthtml-desktop/examples/FastBot/
+skills/fasthtml-desktop/examples/FastCal/
+skills/fasthtml-desktop/examples/FastCLM/
+skills/fasthtml-desktop/examples/FastCMS/
+skills/fasthtml-desktop/examples/FastCRM/
+skills/fasthtml-desktop/examples/FastDPS/
+skills/fasthtml-desktop/examples/FastDataGov/
+skills/fasthtml-desktop/examples/FastDocs/
+skills/fasthtml-desktop/examples/FastDrive/
+skills/fasthtml-desktop/examples/FastERP/
+skills/fasthtml-desktop/examples/FastFPA/
+skills/fasthtml-desktop/examples/FastFactoring/
+skills/fasthtml-desktop/examples/FastHRM/
+skills/fasthtml-desktop/examples/FastLegal/
+skills/fasthtml-desktop/examples/FastMail/
+skills/fasthtml-desktop/examples/FastMeet/
+skills/fasthtml-desktop/examples/FastOffice/
+skills/fasthtml-desktop/examples/FastSheets/
+skills/fasthtml-desktop/examples/FastShop/
+skills/fasthtml-desktop/examples/FastSlides/
+skills/fasthtml-desktop/examples/FastSurvey/
+skills/fasthtml-desktop/examples/FastVC/
+skills/fasthtml-desktop/examples/FastWiki/
+skills/fasthtml-desktop/examples/.venv/
