@@ -1,13 +1,22 @@
 {
   "name": "dsh-fasthtml-desktop",
-  "version": "1.14.2",
-  "description": "fasthtml-desktop skill as a distributable DeepSeek Harness (dsh) Cordis Bundle plugin. Registers the fasthtml-desktop Agent Skill (full repo, self-contained) as an embedded skill provider on ctx.skills.",
+  "version": "2.0.0",
+  "description": "FastHTML + pywebview desktop application development skill as a distributable DeepSeek Harness (dsh) Cordis Bundle plugin. Registers the fasthtml-desktop Agent Skill (self-contained: SKILL.md plus references/, scripts/, templates/, examples/) as an embedded skill provider on ctx.skills.",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "icon": "./icon.svg",
   "files": [
     "index.js",
     "cordis.patch.yml",
     "SKILL.md",
+    "manifest.json",
+    "locale/*.json",
+    "icon.svg",
     "references",
     "scripts",
     "docs",
@@ -20,6 +29,19 @@
     "SECURITY.md",
     "contributing.md"
   ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "cordis-bundle",
+    "agent-skill",
+    "skill-provider",
+    "fasthtml",
+    "pywebview",
+    "desktop",
+    "htmx",
+    "pyinstaller"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -27,7 +49,7 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-skill": "^0.1.0-rc.6",
-    "@deepseek-ai/cordis": "^4.0.1"
+    "@deepseek-ai/dsh-skill": "^0.2.2-rc.1",
+    "@deepseek-ai/cordis": "^4.1.0"
   }
 }
