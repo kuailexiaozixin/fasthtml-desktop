@@ -1,0 +1,58 @@
+# macOS system files
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editor
+.idea/
+.vscode/
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Logs
+*.log
+
+# Local venv
+.venv/
+venv/
+
+# 运行时数据库
+*.sqlite
+*.sqlite3
+
+# examples: 25 个上游快照目录（体积大，不入仓库；由 sync_upstream.py --ensure 自动拉取）
+examples/FastAccounts/
+examples/FastBI/
+examples/FastBot/
+examples/FastCal/
+examples/FastCLM/
+examples/FastCMS/
+examples/FastCRM/
+examples/FastDPS/
+examples/FastDataGov/
+examples/FastDocs/
+examples/FastDrive/
+examples/FastERP/
+examples/FastFPA/
+examples/FastFactoring/
+examples/FastHRM/
+examples/FastLegal/
+examples/FastMail/
+examples/FastMeet/
+examples/FastOffice/
+examples/FastSheets/
+examples/FastShop/
+examples/FastSlides/
+examples/FastSurvey/
+examples/FastVC/
+examples/FastWiki/
+
+# 共享 venv（被 .gitignore 的 .venv/ 规则已覆盖，显式再写一次）
+examples/.venv/
+.backup_*/
