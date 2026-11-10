@@ -68,12 +68,6 @@ dsh plugin --profile web add dsh-fasthtml-desktop
 
 > 也可从 [GitHub Release](https://github.com/kuailexiaozixin/fasthtml-desktop/releases) 下载源码归档离线安装。详见下方「作为 dsh 插件使用」章节。
 
-安装后，只需对助手说一句，例如：
-
-> 「用 fasthtml-desktop 技能，帮我做一个带 Web 界面的客户管理桌面程序，打包成 EXE。」
-
-助手会读取 `SKILL.md`，按其中的工作流与铁律自动完成从脚手架到打包的完整链路。
-
 ---
 
 ## 作为 dsh 插件使用
