@@ -88,7 +88,10 @@ def download_tarball(repo, ref):
                 top = None
                 with tarfile.open(tf) as t:
                     top = t.getnames()[0].split("/")[0]
-                    t.extractall(stage)
+                    try:
+                        t.extractall(stage, filter="data")  # py>=3.12：拒绝危险路径，避免 3.14 默认变更告警
+                    except TypeError:  # 旧版 Python 无 filter 参数
+                        t.extractall(stage)
                 if top and (stage / top).is_dir():
                     return stage / top, ch
             except Exception:
@@ -117,11 +120,17 @@ def apply_exclude(stage: Path, deep: bool = True):
 
 
 def replace_example(stage: Path, example: Path) -> bool:
-    """备份 example→.old → 清空 → 拷入 stage → 恢复本地 启动-*.bat → 删 .old。"""
+    """备份 example→.old → 清空 → 拷入 stage → 恢复本地 启动-*.bat → 删 .old。
+
+    全新安装场景（npm 包只随附 examples/ 占位文件，25 个快照目录尚未拉取）下
+    example 目录并不存在，此时跳过「备份 / 恢复」步骤，直接建目录并拷入。
+    """
     old = example.with_name(example.name + ".old")
     if old.exists():
         shutil.rmtree(old, ignore_errors=True)
-    example.rename(old)
+    had_old = example.exists()
+    if had_old:
+        example.rename(old)
     example.mkdir(parents=True, exist_ok=True)
     n = 0
     for p in stage.rglob("*"):
@@ -130,15 +139,17 @@ def replace_example(stage: Path, example: Path) -> bool:
             tgt.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(p, tgt)
             n += 1
-    for b in old.rglob("启动-*.bat"):  # 保留本地自研启动脚本
+    for b in (old.rglob("启动-*.bat") if had_old else []):  # 保留本地自研启动脚本
         r = b.relative_to(old)
         (example / r).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(b, example / r)
     if n == 0:
         shutil.rmtree(example, ignore_errors=True)
-        old.rename(example)
+        if had_old:
+            old.rename(example)
         return False
-    shutil.rmtree(old, ignore_errors=True)
+    if had_old:
+        shutil.rmtree(old, ignore_errors=True)
     return True
 
 
@@ -401,8 +412,20 @@ def sync_web_files(check: bool = False) -> None:
         else:
             print(f"  [web] {wf['id']}: 已是最新")
 
+USAGE = """用法: python scripts/sync_upstream.py [选项]
+
+  --ensure        使用技能前补齐缺失 / 不完整 + 追新 + 建 venv + 生成启动器
+  --check         只检测（不下载、不写入）：缺失 / 上游新提交
+  --force <id>... 强制重拉指定 example（可多个 id，如 FastCRM FastVC）
+  (无参数)        等同 --ensure 的完整同步
+"""
+
+
 def main() -> int:
     args = sys.argv[1:]
+    if any(a in ("-h", "--help", "/?") for a in args):
+        print(USAGE)
+        return 0
     check = "--check" in args
     ensure = "--ensure" in args
     force = [a for a in args[args.index("--force") + 1:] if not a.startswith("--")] if "--force" in args else []

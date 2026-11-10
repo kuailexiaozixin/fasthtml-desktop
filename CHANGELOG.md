@@ -1,5 +1,23 @@
 # 变更记录
 
+## 2.0.1 (2026-11-10)
+
+### 修复
+- **`sync_upstream.py --ensure` 在全新安装下崩溃**：`replace_example()` 对尚不存在的 `examples/<Name>/` 目录直接调用 `rename()`，抛 `FileNotFoundError`，导致「首次使用自动拉取上游快照」在干净环境（仓库新克隆 / npm 新安装）完全不可用。现改为：目录不存在时跳过「备份 / 恢复」步骤，直接建目录拷入；空 stage 回滚分支同样加守卫。
+- **`--help` 会触发完整同步**：原 `-h / --help` 未处理，等同无参数执行完整 `--ensure`（会真的下载 25 个快照）。现补 `USAGE` 并提前返回 0。
+- `tarfile.extractall` 增加 `filter="data"`（Python ≥3.12），消除 3.14 默认行为变更告警并拒绝危险路径。
+
+### 变更（npm 分发包口径与 Git 仓库对齐）
+- **npm 包不再内置 25 个上游示例快照**：`examples/` 只随包发布 `README.md` + `check_deps.py` 占位，首次使用执行 `python scripts/sync_upstream.py --ensure` 自动拉取（25 源见 `manifest.json` → `sources`）。
+- 包体积：解包 **64.9 MB → 约 1.48 MB**，文件数 **2771 → 181**，压缩包 **31.7 MB → 约 0.49 MB**（`npm pack` 实测：tgz 516,204 B / unpacked 1,550,274 B / 181 files）。
+- `.npmignore` 增加 25 条 `examples/<Name>/` 排除规则；`package.json` 的 `files` 由目录 `"examples"` 收窄为 `examples/README.md`、`examples/check_deps.py`（`files` 允许列表优先于 `.npmignore`）。
+
+## 2.0.0
+
+### 变更（DSH Cordis Bundle 元数据）
+- 对齐 DSH bundle 规范：`dsh.bundle.patch` → `cordis.patch.yml`；新增 `icon.svg` 与 `locale/{en,zh}.json`。
+- `peerDependencies` 对齐运行期：`@deepseek-ai/dsh-skill ^0.2.2-rc.1`、`@deepseek-ai/cordis ^4.1.0`。
+
 
 ## 1.14.2 (2026-10-21)
 

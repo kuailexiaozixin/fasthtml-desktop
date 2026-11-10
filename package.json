@@ -1,6 +1,6 @@
 {
   "name": "dsh-fasthtml-desktop",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "FastHTML + pywebview desktop application development skill as a distributable DeepSeek Harness (dsh) Cordis Bundle plugin. Registers the fasthtml-desktop Agent Skill (self-contained: SKILL.md plus references/, scripts/, templates/, examples/) as an embedded skill provider on ctx.skills.",
   "type": "module",
   "main": "index.js",
@@ -21,13 +21,18 @@
     "scripts",
     "docs",
     "templates",
-    "examples",
+    "examples/README.md",
+    "examples/check_deps.py",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "SECURITY.md",
-    "contributing.md"
+    "contributing.md",
+    "!**/__pycache__",
+    "!**/*.pyc",
+    "!**/.venv",
+    "!**/node_modules"
   ],
   "keywords": [
     "dsh",
