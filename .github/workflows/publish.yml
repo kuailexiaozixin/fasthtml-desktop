@@ -1,0 +1,48 @@
+name: publish
+
+# Trusted publishing (OIDC) for npm.
+# No NPM_TOKEN secret is used: the runner proves its identity to the npm
+# registry with a short-lived OIDC token.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只打包，不发布"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # npm >= 11.5.1 is required for trusted publishing (OIDC)
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Show versions
+        run: node -v && npm -v
+
+      - name: Install dependencies (no scripts)
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Publish package (trusted publishing)
+        if: ${{ inputs.dry_run != true }}
+        run: npm publish
+
+      - name: Verify package contents only
+        if: ${{ inputs.dry_run == true }}
+        run: npm pack --dry-run
