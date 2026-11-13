@@ -56,5 +56,9 @@
   "peerDependencies": {
     "@deepseek-ai/dsh-skill": "^0.2.2-rc.1",
     "@deepseek-ai/cordis": "^4.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kuailexiaozixin/fasthtml-desktop.git"
   }
 }
