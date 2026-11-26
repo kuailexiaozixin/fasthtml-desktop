@@ -431,7 +431,6 @@ webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER'] = True   # 默认值
 ```
 
 > **FastHTML 桌面应用推荐保持默认 `True`**：应用内部路由通过 HTMX `hx-get` / `hx-post` 处理（不触发整页导航），外部链接走系统浏览器打开——这是桌面应用的标准行为。设为 `False` 会导致用户点击外部链接时 WebView 导航到外部页面且无法返回。
-> 镜像示例：`pywebview-examples/links.py`。
 
 ### `webbrowser.open`：外链行为的内部实现（实证 6.2.1 源码）
 
@@ -561,7 +560,7 @@ window.dom.document.events.drop += DOMEventHandler(on_drop, prevent_default=True
 
 > ⚠️ **字段名已修正**：pywebview 拖放事件用的是 `e['dataTransfer']['files'][0]['pywebviewFullPath']`，**不是** `domTransfer`（全库无 `domTransfer` 字段）。`DOMEventHandler` 用于声明 `prevent_default` / `stop_propagation`，是推荐绑定方式。
 > 与 `create_file_dialog` 互补：前者适合"拖入即处理"，后者适合"显式选择 / 多文件 / 保存路径"。
-> `drop` 依赖 `window.dom`，须在窗口 / DOM 就绪后绑定。完整可用示例见 `pywebview-examples/drag_drop.py`。
+> `drop` 依赖 `window.dom`，须在窗口 / DOM 就绪后绑定。完整实现即本节代码。
 
 ---
 
@@ -662,7 +661,7 @@ window.events.response_received += lambda w, resp: print('收到响应:', resp.u
 
 > **适用场景**：应用需要常驻后台、快速唤醒（如定时监控、消息提醒）。
 > 关闭窗口时最小化到托盘而非退出，右键托盘图标显示菜单。
-> **实现方式**：pywebview 无内置托盘，使用 `pystray` 第三方库（依赖 `Pillow` 提供图标），见下方代码与 `pywebview-examples/pystray_icon.py`。
+> **实现方式**：pywebview 无内置托盘，使用 `pystray` 第三方库（依赖 `Pillow` 提供图标），完整实现见下方代码。
 
 > ⚠️ **已修正**：pywebview **没有**内置托盘 API（`webview.TrayIcon` 不存在，`create_window` 无 `tray` 参数）。系统托盘须用第三方库 **`pystray`**（配合 `Pillow` 提供图标）实现，并以独立进程运行避免阻塞 GUI 主线程。
 
@@ -696,7 +695,7 @@ tray_proc = multiprocessing.Process(target=run_tray, args=(window,), daemon=True
 tray_proc.start()
 ```
 
-> 依赖：`pip install pystray Pillow`。完整可用示例见 `pywebview-examples/pystray_icon.py`（已验证 Windows / Edge 可用）。
+> 依赖：`pip install pystray Pillow`。本节实现已验证 Windows / Edge 可用。
 
 ---
 
@@ -725,7 +724,7 @@ webview.settings['ALLOW_DOWNLOADS'] = True
 # WebView2 会弹出原生"另存为"对话框，无需额外事件监听。
 ```
 
-> 如需自定义下载落盘路径，配合 `create_file_dialog(dialog_type=webview.FileDialog.SAVE, save_filename=...)` 让用户选择。完整可用示例见 `pywebview-examples/downloads.py`。
+> 如需自定义下载落盘路径，配合 `create_file_dialog(dialog_type=webview.FileDialog.SAVE, save_filename=...)` 让用户选择。
 
 ---
 
@@ -970,87 +969,8 @@ if __name__ == "__main__":
 
 ---
 
-## 已验证示例索引（`pywebview-examples/`）
+## 上游示例与能力回归
 
-本目录镜像了 pywebview 官方示例（v6.2.1）中**适用于 FastHTML + pywebview 跨平台技术栈**的脚本，作为 `06` 内联改写代码的权威上游参考。每个文件已加适配注释头。其中 5 个原「锁死栈外」的示例经跨平台适配后已解锁为**跨平台专属示例**（标注适用平台，仅在该平台有效），详见下方 **E 类**（此处不再重复列举，避免与 E 类重复）。
+本技能不再内置 pywebview 官方示例副本；与 FastHTML 集成相关的关键能力均已在本文按主题内联说明。需要比对上游原始实现时，请查阅 pywebview 官方仓库的 `examples/`。
 
-### A 类 · 高价值缺口（06 原缺失/写错，本次已修正）
-
-| 脚本 | 用途 | 对应修正 |
-|------|------|---------|
-| `pystray_icon.py` | 系统托盘（正确实现） | 替代伪造的 `webview.TrayIcon` / `tray=True` |
-| `drag_drop.py` | 文件拖放 | 修正 `domTransfer` → `dataTransfer['files'][0]['pywebviewFullPath']` |
-| `downloads.py` | 文件下载 | 替代伪造的 `events.download`，用 `ALLOW_DOWNLOADS` |
-| `loading_animation.py` | SSR 首屏 loading | 避免 uvicorn 启动期白屏 |
-| `dom_state_dragregion_verified.py` | FastHTML+pywebview 端到端自验证（16 项断言） | 实证 `window.dom` 全 API / drag-region+settings / load_css / state 事件订阅；开发态与打包 EXE 双态 ALL_PASS（2026-07 实测） |
-
-### B 类 · 已覆盖于 06（上游原版参考）
-
-| 脚本 | 用途 |
-|------|------|
-| `change_url.py` | 运行时切换窗口 URL |
-| `confirm_close.py` | 关闭前确认（`confirm_close=True`） |
-| `confirmation_dialog.py` | 确认对话框 |
-| `cookies.py` | 读取 cookie（`get_cookies()`） |
-| `debug.py` | 调试模式（DevTools） |
-| `destroy_window.py` | 销毁窗口 |
-| `dom_events.py` | DOM 事件 |
-| `evaluate_js.py` | Python 调 JS（同步） |
-| `evaluate_js_async.py` | Python 调 JS（异步回调） |
-| `events.py` | 窗口生命周期事件 |
-| `expose.py` | 运行时暴露方法 |
-| `focus.py` | 窗口聚焦 |
-| `frameless.py` | 无边框窗口 |
-| `fullscreen.py` | 全屏 |
-| `hide_window.py` | 隐藏窗口 |
-| `js_api.py` | JS↔Python 桥接 |
-| `load_html.py` | 直接加载 HTML |
-| `menu.py` | 菜单（`from webview.menu import ...`） |
-| `min_size.py` | 最小尺寸 |
-| `move_window.py` | 移动窗口 |
-| `multiple_windows.py` | 多窗口 |
-| `on_top.py` | 窗口置顶 |
-| `open_file_dialog.py` | 打开文件对话框 |
-| `resize.py` | 调整窗口大小 |
-| `save_file_dialog.py` | 保存文件对话框 |
-| `settings.py` | `webview.settings` 配置 |
-| `state.py` | `window.state` 双向共享 |
-| `toggle_fullscreen.py` | 切换全屏 |
-| `window_state.py` | 窗口状态 |
-| `window_title_change.py` | 动态改标题 |
-
-### D 类 · 2026-07 增补镜像（gap-demo 打包态 22 项断言 ALL_PASS 实证）
-
-| 脚本 | 用途 | 实证要点 |
-|------|------|---------|
-| `get_current_url.py` | 读取当前 URL | `window.get_current_url()` 实证存在（N2） |
-| `get_elements.py` | 批量选择元素 | API 是 `window.dom.get_elements`，无 `window.get_elements` |
-| `dom_manipulation.py` | DOM 增删改 | create_element/classes/style/remove 全实证（A 类） |
-| `dom_traversal.py` | DOM 遍历 | `Element.parent/children/next/previous` 均为真实 property |
-| `drag_region.py` | 无边框拖拽区 | settings['DRAG_REGION_SELECTOR'] 新 API（B 类） |
-| `load_css.py` | 注入 CSS | getComputedStyle 断言生效（C2） |
-| `transparent.py` | 透明无边框窗口 | Windows 可用；与 vibrancy（仅 macOS）无关 |
-| `remote_debugging.py` | 远程调试端口 | settings['REMOTE_DEBUGGING_PORT'] |
-| `multiprocess.py` | 多进程运行 | Windows 注意 freeze_support |
-| `multiple_servers.py` | 多服务器多窗口 | 上游用 bottle；落地换多 uvicorn 端口 |
-| `localhost_ssl.py` | 本地 SSL | `start(ssl=True)` 参数实证存在 |
-| `user_agent.py` | 定制 UA | ⚠ `user_agent` 是 `start()` 参数而非 `create_window` 参数（N5） |
-| `headers.py` | 请求头注入/监听 | `events.request_sent`/`response_received` 为**实例动态属性**，edgechromium 有实现（类级检查会误判不存在） |
-| `screens.py` | 屏幕枚举 | `webview.screens` 返回列表，s.width/s.height（N4） |
-| `http_server.py` | 内置 HTTP server | 相对路径入口自动起服务（常规路线仍是 uvicorn） |
-| `links.py` | 外链行为 | target='_blank' 走外部浏览器 |
-| `localization.py` | 本地化 | `start(localization=...)`；Windows 生效键为 `windows.*`/`global.*`（N6） |
-| `run_js.py` | 运行 JS 取返回值 | `window.run_js(script)` 实证返回求值结果（N3） |
-| `simple_browser.py` | 最小窗口闭环 | create_window + start 最小示例 |
-
-> 说明：B 类脚本在 `06` 中已有**针对 FastHTML + Windows/Edge 的改写版**（部分上游示例用 flask / 内置 http server / `https://`），实际落地请以 `06` 内联代码为准；`pywebview-examples/` 用于比对上游原始实现。
-
-### E 类 · 跨平台专属示例（多端适配解锁，标注适用平台）
-
-| 脚本 | 适用平台 | 用途 | 关键约束 |
-|------|----------|------|----------|
-| `cef.py` | 跨平台（⚠ 仅 Python ≤3.9） | CEF 后端 `gui='cef'` | cefpython3 仅支持到 Py3.9；现代 Python 禁用（见 `11-cross-platform.md` §6） |
-| `qt_test.py` | 跨平台 | Qt 后端 `gui='qt'` | 需 `pip install qtpy` + Qt 绑定 |
-| `vibrancy.py` | **仅 macOS cocoa** | 窗口 vibrancy 毛玻璃 | Windows/Linux 源码 0 命中，设 True 无效 |
-| `icon.py` | **仅 GTK / QT** | 运行时设置窗口图标 | Edge/cocoa 图标在打包阶段设置，运行时无效 |
-| `py2app_setup.py` | **仅 macOS** | py2app setup 模板 | 经典 `python setup.py py2app`；可运行版见 `scripts/build_macos_py2app.py` |
+唯一保留的可执行回归探针是 [`scripts/pywebview_capability_probe.py`](../../scripts/pywebview_capability_probe.py)：真实开窗验证 pywebview 6.2.1 的 DOM API、drag-region、`load_css` 与 `window.state` 双向同步。它用于升级 pywebview 或更换运行环境后的能力核验，不是日常交付必跑的 UI 门禁。

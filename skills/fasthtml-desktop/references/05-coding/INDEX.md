@@ -22,7 +22,6 @@
 | `fasthtml-refs/picocss-reference.md` | PicoCSS 参考 |
 | `fasthtml-refs/fastlite-llms.txt` | 数据库操作时 |
 | `fasthtml-refs/genui-hypermedia-reference.md` | GenUI 超媒体 |
-| `pywebview-examples/` | 59 个已验证示例脚本（按能力域查阅） |
 
 ## 测试驱动
 

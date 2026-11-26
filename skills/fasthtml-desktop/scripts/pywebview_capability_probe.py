@@ -7,7 +7,7 @@
   C: load_css / webview.settings 全字段 / window.state 双向同步 + 事件订阅(StateEventType)
   F: 应用代码使用 logging（而非 print）作为运行日志（PASS 断言输出仍用 print 便于外部采集）
 
-运行方式：python main.py  → 自动开窗、自动断言、自动销毁窗口，最后打印 ALL_PASS / SOME_FAIL 并以 0/1 退出。
+运行方式：python scripts/pywebview_capability_probe.py → 自动开窗、自动断言、自动销毁窗口，最后打印 ALL_PASS / SOME_FAIL 并以 0/1 退出。
 """
 import logging
 import socket

@@ -165,13 +165,7 @@ metadata:
   * `references/05-coding/pywebview-shell.md`（pywebview 桌面壳：后端矩阵 / 窗口控制 / JS 桥接 / 对话框 / 菜单 / DOM / 拖拽 / 系统托盘）
   * `references/05-coding/fasthtml-refs/genui-hypermedia-reference.md`（GenUI 超媒体）
   * `references/05-coding/fasthtml-fastapi.md`（FastAPI 集成）
-  * `references/05-coding/pywebview-examples/`（59 个已验证示例脚本，按能力域查阅）：
-    * 窗口基础/生命周期：`simple_browser.py`, `multiple_windows.py`, `destroy_window.py`, `hide_window.py`, `confirm_close.py`, `window_title_change.py`, `change_url.py`, `get_current_url.py`, `http_server.py`, `localhost_ssl.py`
-    * 窗口外观/行为：`frameless.py`, `transparent.py`, `fullscreen.py`, `toggle_fullscreen.py`, `on_top.py`, `min_size.py`, `resize.py`, `move_window.py`, `icon.py`, `vibrancy.py`, `window_state.py`, `state.py`, `focus.py`, `screens.py`, `loading_animation.py`, `localization.py`
-    * JS 桥接 / DOM：`js_api.py`, `expose.py`, `evaluate_js.py`, `evaluate_js_async.py`, `run_js.py`, `get_elements.py`, `dom_events.py`, `dom_manipulation.py`, `dom_traversal.py`, `dom_state_dragregion_verified.py`, `load_html.py`, `load_css.py`, `headers.py`, `user_agent.py`, `settings.py`, `debug.py`, `remote_debugging.py`, `multiprocess.py`
-    * 对话框 / 文件 / 下载：`open_file_dialog.py`, `save_file_dialog.py`, `confirmation_dialog.py`, `downloads.py`, `drag_drop.py`, `links.py`, `cookies.py`
-    * 菜单 / 托盘 / 集成：`menu.py`, `pystray_icon.py`, `drag_region.py`, `events.py`
-    * 跨平台 / 后端专用：`cef.py`, `qt_test.py`, `py2app_setup.py`, `multiple_servers.py`
+
 * **铁律（编码）**：
   * **接口层入口必须 `reload=False`**：`uvicorn.run(app, reload=False)`，禁止 `serve()` 打包
   * **路径适配必须用 `sys.frozen` 检测**：`BASE_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent`
@@ -199,6 +193,7 @@ metadata:
   * `scripts/ui_audit.py`（反模式审计，纯 headless，13 条禁令 / AI Slop / a11y，**禁止跳过**；自动抓取 `<link rel=stylesheet>` 外部 CSS 纳入审计；可用 `--ignore-ban "禁令名/序号/子串"` 豁免已知误报）
   * `scripts/ui_window_verify.py`（pywebview 原生窗口视觉质检：DOM 断言+可选截图；无头截图自动回退 html2canvas；**HTML 结构验证通过 ≠ 界面没问题**；无 GUI 强制 HTML 结构验证）
   * `scripts/ui_automate.py`（UI 交互自动化：点击/输入/导航/断言，验证按钮/表单/状态切换等交互行为正确性）
+  * `scripts/pywebview_capability_probe.py`（可选：pywebview 6.2.1 能力回归探针，真实开窗验证 DOM / drag-region / load_css / state；不是每次交付必跑的 UI 门禁）
   * 质检/自动化 **exit 1 即禁止发布**；纯主观审美不在机器范围，按需人工判断，但**不将人工截图作为验收手段**。
 * **要点**：UI 行为变更须同步更新/新增测试；质检脚本详细用法见 `references/07-quality-gate/Test/04-ui-tools.md`；设计质量评审详见 `references/05-coding/ui-design.md` 审美取向方法论。
 * **产出物**：完善后的界面 + 质检报告（ui_audit / ui_window_verify / ui_automate）。

@@ -154,7 +154,7 @@ fasthtml-desktop/                # 仓库根
 │       ├── README.md            # 本文件
 │       ├── references/          # 深度参考（按工作流①→⑨编号）
 │       │   ├── 02-architecture/ # ② 架构设计（18 章 + 模块设计）
-│       │   ├── 05-coding/       # ⑤ 编码（含 fasthtml-refs/ 官方上下文、pywebview-examples/）
+│       │   ├── 05-coding/       # ⑤ 编码（含 fasthtml-refs/ 官方上下文）
 │       │   ├── 07-quality-gate/ # ⑦ 质量门禁（Check/Test/Debug 三层）
 │       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台 + 7 子专题）
 │       │   └── ...
