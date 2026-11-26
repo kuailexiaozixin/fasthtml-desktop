@@ -28,13 +28,13 @@ metadata:
 
 ## 0 使用前置：上游同步 + 共享 venv + 一键启动（首次安装必做）
 
-本技能经 GitHub 仓库分发时，`examples/`（predictivelabsai 组织 23 个 FastHTML 应用快照）可能仅保留占位或被裁剪。
+本技能经 GitHub 仓库分发时，`examples/`（predictivelabsai 组织 25 个 FastHTML 应用快照）可能仅保留占位或被裁剪。
 **首次使用本技能前（或任一 example 只剩占位/不完整时），先运行：**
 
     python scripts/sync_upstream.py --ensure
 
 一次自动完成三件事：
-1. **拉取上游**：从 `predictivelabsai` 各仓库下载最新 tarball（codeload→ghfast 通道降级），补齐缺失/不完整 example；
+1. **同步上游**：先按远端 HEAD 跳过最新项；默认经 compare → trees → raw 做文件级增量，变更过多或增量不可用时改用固定 SHA 的整仓库 tarball 兜底；所有 stage 均校验文件集与 blob SHA 后再替换；
 2. **深度清理**：按 `manifest.json` 的 `exclude` 排除无用产物（Playwright `output/`、`docs` 的 PDF/PPT/演示图、`screenshots/` 等），保留源码与可运行数据，省体积；
 3. **建共享 venv + 一键启动**：创建 `examples/.venv`（本机 Python 3.13.14），合并各 example 依赖装入、依赖变化自动重装；为缺 `启动-*.bat` 的 example 生成简化启动脚本（已有者保留）。
 

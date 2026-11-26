@@ -44,7 +44,7 @@
       "repo": "predictivelabsai/FastBI",
       "ref": "main",
       "local_dir": "examples/FastBI",
-      "pinned_sha": "c37ebf64fb95",
+      "pinned_sha": "e663188c90026118a769788c4e7ca5098c915721",
       "license": "MIT"
     },
     {
@@ -77,7 +77,7 @@
       "repo": "predictivelabsai/FastCRM",
       "ref": "main",
       "local_dir": "examples/FastCRM",
-      "pinned_sha": "061e5068d6ef",
+      "pinned_sha": "b2f9a42dbcd922ff5bce03c93e4a5814647b14f5",
       "license": "MIT"
     },
     {
@@ -182,7 +182,7 @@
       "repo": "predictivelabsai/FastShop",
       "ref": "main",
       "local_dir": "examples/FastShop",
-      "pinned_sha": "2c86f8be0a06",
+      "pinned_sha": "7ce9e563876c212addfb6c1a06c1e814e85a5143",
       "license": "MIT"
     },
     {
@@ -222,7 +222,7 @@
       "repo": "predictivelabsai/FastFactoring",
       "ref": "main",
       "local_dir": "examples/FastFactoring",
-      "pinned_sha": "d19a1b5e35cb",
+      "pinned_sha": "41ed19a1b5e35cb607892d70d7bab74be3f5d212",
       "license": "MIT"
     },
     {
@@ -230,7 +230,7 @@
       "repo": "predictivelabsai/FastCMS",
       "ref": "main",
       "local_dir": "examples/FastCMS",
-      "pinned_sha": "088d0449fcd3",
+      "pinned_sha": "935088d0449fcd3f6b248ea09742ef026fee132d",
       "license": "MIT"
     }
   ],

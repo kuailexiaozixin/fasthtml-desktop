@@ -6,8 +6,9 @@
 > ```bash
 > python scripts/sync_upstream.py --ensure
 > ```
-> 自动从 `predictivelabsai` 组织拉取全部上游快照 + 创建共享 `examples/.venv` + 生成一键启动 `启动-*.bat`。
+> 自动同步 `predictivelabsai` 组织上游 + 创建共享 `examples/.venv` + 生成一键启动 `启动-*.bat`。
 > 后续同步更新：`python scripts/sync_upstream.py --check`（检测新提交）/ `--force`（强制重拉）。
+> 默认按 compare → trees → raw 做文件级增量，变更过多或增量不可用时下载固定 SHA 的整仓库 tarball 兜底；替换前统一校验文件集与 blob SHA。
 > 机制详见 `../scripts/sync_upstream.py` 与 `../manifest.json`（25 源的 SHA pinning + exclude + keep 规则）。
 
 > **定位**：FastHTML 重型应用范例库——FastOffice 套件 25 个可运行的企业级应用。每个项目都是参考语料，**可借鉴要点**指向真实源码位置，做自己的 FastHTML 应用时可直接抠走对应零件。

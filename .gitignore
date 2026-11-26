@@ -22,6 +22,12 @@ build/
 .venv/
 venv/
 
+# 上游同步进程锁
+manifest.json.lock
+
+# 上游目录事务恢复文件
+examples/*/.sync-*
+
 # 运行时数据库
 *.sqlite
 *.sqlite3
