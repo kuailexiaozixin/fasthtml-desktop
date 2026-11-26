@@ -1160,8 +1160,8 @@ def _port_for(s: dict, ex: Path) -> str:
         m = re.search(r"--port\s+(\d{4,5})", existing[0].read_text(encoding="gbk", errors="ignore"))
         if m:
             return m.group(1)
-    # 默认按字母序分配（FastAccounts=5026, FastBI=5000, …）
-    defaults = {"FastAccounts":"5026","FastBI":"5000","FastBot":"5028","FastCal":"5005",
+    # 默认按字母序分配（FastAccounts=5026, FastBI=5027, …）
+    defaults = {"FastAccounts":"5026","FastBI":"5027","FastBot":"5028","FastCal":"5005",
                 "FastCLM":"5029","FastCRM":"5006","FastDataGov":"5062","FastDPS":"5030",
                 "FastDocs":"5016","FastDrive":"5012","FastERP":"5011","FastFPA":"5031",
                 "FastHRM":"5032","FastLegal":"5007","FastMail":"5009","FastMeet":"5015",
@@ -1203,9 +1203,12 @@ def gen_bats(sources):
             'echo  关闭此窗口即停止服务',
             f'echo ========================================',
         ]
+        lines.append(f'set "PORT={port}"')
         if nested:
             lines.append(f'cd /d "%~dp0{nested}"')
-        lines.append(f'start "" "http://127.0.0.1:{port}"')
+        lines.append(
+            f'start "" /min "%PY%" "%~dp0..\\..\\scripts\\open_when_ready.py" '
+            f'"http://127.0.0.1:{port}" 90')
         if mode == "direct":
             lines.append(f'"%PY%" {entry}')
         else:

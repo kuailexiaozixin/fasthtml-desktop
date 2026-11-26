@@ -13,7 +13,9 @@
 
 > **定位**：FastHTML 重型应用范例库——FastOffice 套件 25 个可运行的企业级应用。每个项目都是参考语料，**可借鉴要点**指向真实源码位置，做自己的 FastHTML 应用时可直接抠走对应零件。
 
-> **运行**：双击项目根目录 `启动-<项目>.bat`，浏览器打开 `http://127.0.0.1:<端口>`（端口见总览表）；共享环境 `examples\.venv`（Python 3.13.14）。无启动脚本项目（FastCal / FastLegal，PostgreSQL）按各自 README 配置后启动。
+> **运行**：双击项目根目录 `启动-<项目>.bat`，浏览器打开 `http://127.0.0.1:<端口>`（端口见总览表）；共享环境 `examples\.venv`（Python 3.13.14）。启动器先检查 venv 与依赖，再由 `scripts/open_when_ready.py` 等待服务就绪后打开浏览器。无启动脚本项目（FastCal / FastLegal，PostgreSQL）按各自 README 配置后启动。
+>
+> **启动验证（2026-11-26）**：23 个已有启动脚本逐一启动并通过 `GET / == HTTP 200`；依赖自检 25/25 通过，共享 venv `pip check` 无冲突。FastCal / FastLegal 仍要求外部 PostgreSQL，故不提供脚本。
 
 ## 可借鉴要点（逐项目）
 
@@ -56,6 +58,16 @@
 - **提醒引擎** `fastclm/reminders.py` + **审计日志** `services/audit.py`：到期提醒、全量审计的通用实现。
 - **安全纵深** `services/malware.py`（附件恶意扫描）+ `services/retention.py`（保留策略）+ `security.py`。
 - **SCIM 与 SSO** `services/scim.py` + `auth.py`：企业身份目录对接的参考。
+
+### FastCMS
+
+> 轻量级内容管理系统：页面树、富文本、媒体库、版本与发布流。
+
+- **分层 CMS 骨架** `app/` + `admin/`：前台页面、内容 API、账户/Google 登录与后台管理分层，互不混写。
+- **页面树与内容块** `admin/page_editor.py` + `app/blocks.py`：拖拽排序页面树、StreamField 风格组合内容块。
+- **媒体与全文检索** `admin/media_library.py` + `app/search.py`：媒体集合/标签与 SQLite FTS5 搜索。
+- **发布与版本** `app/pages.py`：草稿、审核、定时发布、修订历史与恢复。
+- **动态表单与 JSON API** `app/forms.py` + `app/fastapi_api.py`：后台建表、回收问卷、CSV 导出与无头 CMS 接口。
 
 ### FastCRM
 
@@ -133,6 +145,16 @@
 - **数据集成** `FastFPA/web/integrations.py`：外部财务数据接入的适配层。
 - **AI 分析** `FastFPA/web/ai.py`：自然语言问数、差异解读。
 
+### FastFactoring
+
+> 发票融资平台：供应商入驻、票据核验、资金匹配、服务与结算。
+
+- **双面站点**：营销站与 HTMX 产品应用同进程，覆盖 dashboard、marketplace、portfolio、statement、auto-invest。
+- **角色与 RBAC** `auth/`：investor / supplier / payer / admin 四角色，本地与 Google 登录统一映射。
+- **投资规则** `app.py` + PostgreSQL：按风险等级、单票上限、行业偏好配置自动投标。
+- **报表与账本** `chat/` 等模块提供持仓账龄、付款习惯与可筛选账户流水；支持 CSV 导出。
+- **多语言**：FastSME 12 语言目录，按管理员选择启用。
+
 ### FastHRM
 
 > 人力资源：员工、考勤、薪酬、招聘 ATS、人才平台。
@@ -194,6 +216,9 @@
 - **支付与平台适配** `app/integrations/`（stripe_paypal/woocommerce/carrier/fasterp）：支付、物流、外部电商平台、ERP 的集成层。
 - **店铺构建器** `app/site_builder_*`：模板 + AI 生成整站。
 - **Webhooks** `app/commerce_webhooks.py`：外部事件回调解耦。
+- **自定义域名** `app/coolify_domains.py` + Domains 流程：DNS 校验、重定向与按域名接收 provider webhook。
+- **店铺 AI Assistant** `app/assistant_*` + `app/agent_*`：按店铺解析模型、工具调用、审核、审计与文档提取。
+- **导入与 SEO** `app/importer_credential_routes.py` + SEO 设置：Shopify / WooCommerce / WordPress 接入与 storefront head。
 - **合规与调度** `app/compliance.py` + `app/scheduler.py`。
 - **与 FastERP 集成** `app/integrations/fasterp.py`：电商订单同步进 ERP 的桥接。
 
@@ -241,6 +266,7 @@
 | `FastBI/` | BI 分析平台：多数据源、看板图表与检索问答。 | 启动-FastBI.bat（5027） | PostgreSQL（pgvector/neo4j）；AI 问答需 LLM Key |
 | `FastBot/` | AI 机器人：多轮 agent、工具调用与浏览器自动化。 | 启动-FastBot.bat（5028） | AI 需 LLM Key；浏览器自动化需 playwright |
 | `FastCLM/` | 合同生命周期管理：起草、审批、签署、归档、提醒。 | 启动-FastCLM.bat（5029） | PostgreSQL；S3 可选 |
+| `FastCMS/` | 轻量 CMS：页面树、富文本、媒体库、版本、动态表单。 | 启动-FastCMS.bat（5042） | 离线可用（SQLite） |
 | `FastCRM/` | 销售 CRM：线索、看板管道、联系人、任务、AI 助手。 | 启动-FastCRM.bat（5006） | 离线可用（SQLite）；AI 需 LLM Key（BYOK） |
 | `FastDataGov/` | 数据治理：统一目录、血缘、质量、认证、访问申请。 | 启动-FastDataGov.bat（5062） | 默认演示模式；PostgreSQL 需配 DB_URL / REPOSITORY_MODE=postgres |
 | `FastCal/` | 团队日历：轮询调度、时区安全、冲突预防。 | 无启动脚本，见项目 README | PostgreSQL（SQLAlchemy）；Google 日历集成 |
@@ -249,6 +275,7 @@
 | `FastDrive/` | 文件管理：文件树、分享链接、权限、AI 助手。 | 启动-FastDrive.bat（5012） | 离线可用；AI 助手需 LLM Key |
 | `FastERP/` | ERP：订单到收款、采购到付款、库存、会计引擎。 | 启动-FastERP.bat（5011） | 离线可用（SQLite）；PG 可选 |
 | `FastFPA/` | 财务规划与分析：预算、滚动预测、现金流、差异归因。 | 启动-FastFPA.bat（5031） | 离线可用 |
+| `FastFactoring/` | 发票融资：入驻、核验、资金匹配、组合、结算。 | 启动-FastFactoring.bat（5041） | PostgreSQL；多角色演示数据 |
 | `FastHRM/` | 人力资源：员工、考勤、薪酬、招聘 ATS、人才平台。 | 启动-FastHRM.bat（5032） | AI 功能需 LLM Key |
 | `FastLegal/` | 法务 AI：项目、文档审阅、可复用工作流。 | 无启动脚本，见项目 README | AI 审阅需任一 LLM Key；PostgreSQL |
 | `FastMail/` | 邮件客户端：收发、标签、联系人、AI 摘要。 | 启动-FastMail.bat（5009） | 收发需邮件账号；AI 摘要需 LLM Key |

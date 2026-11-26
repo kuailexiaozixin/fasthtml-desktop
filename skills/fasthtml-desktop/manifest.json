@@ -182,8 +182,9 @@
       "repo": "predictivelabsai/FastShop",
       "ref": "main",
       "local_dir": "examples/FastShop",
-      "pinned_sha": "7ce9e563876c212addfb6c1a06c1e814e85a5143",
-      "license": "MIT"
+      "pinned_sha": "fb514e41ca4242c975c57c2df1e3703bce5f664e",
+      "license": "MIT",
+      "snapshot_sha256": "937c8bb901217052bc2e715b7a6359b0fb95886346b8779fbfa4aed46607eb69"
     },
     {
       "id": "FastSlides",

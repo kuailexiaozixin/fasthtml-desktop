@@ -11,7 +11,7 @@
   3. 无 requirements 但有 pyproject → pip install -q <提取的 deps>；
   4. 都没有 → 内置最小清单 + pip install；
   5. 镜像降级：Aliyun → 清华 → PyPI。
-  6. 全部已装时秒退（pip 输出 "Requirement already satisfied"），无实质开销。
+  6. 安装完成后直接退出；不在当前进程 import 应用入口，避免 `serve()` 在自检阶段启动服务或阻塞。
 """
 from __future__ import annotations
 
@@ -70,15 +70,19 @@ def find_requirements(ex_root: Path, example_id: str) -> tuple[Path | None, Path
     return None, ex_dir
 
 
-def pip_install(pkgs_or_args: list[str], extra_args: list[str] = []) -> bool:
-    """用镜像链 pip install。返回成功/失败。"""
+def pip_install(pkgs_or_args: list[str], extra_args: list[str] | None = None,
+                cwd: Path | None = None) -> bool:
+    """用镜像链 pip install；cwd 让 `-e .` 指向当前 example。返回成功/失败。"""
+    extra_args = extra_args or []
     for i, (mirror, trust) in enumerate(MIRRORS):
-        cmd = [sys.executable, "-m", "pip", "install", "-q"] + extra_args + [
+        cmd = [sys.executable, "-m", "pip", "install", "-q",
+               "--disable-pip-version-check"] + extra_args + [
             "-i", mirror
         ] + trust + pkgs_or_args
         print(f"  [deps] pip install（源 {i + 1}/{len(MIRRORS)}）...")
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=600,
+                               cwd=str(cwd) if cwd is not None else None)
             if r.returncode == 0:
                 print(f"  [deps] OK")
                 return True
@@ -103,12 +107,7 @@ def main() -> int:
     if req_path and req_path.is_file():
         # 模式 1: pip install -r requirements.txt（幂等，extras 正确）
         print(f"  [deps] {example_id}: 检查 requirements.txt …")
-        ok = pip_install(["-r", str(req_path)])
-        if ok:
-            # 验证：import 入口模块
-            _verify_import(search_dir, example_id)
-            return 0
-        return 1
+        return 0 if pip_install(["-r", str(req_path)], cwd=search_dir) else 1
 
     # 模式 2: pyproject.toml → 提取 deps
     pyp = search_dir / "pyproject.toml"
@@ -121,48 +120,14 @@ def main() -> int:
             deps = [d for d in deps if not d.startswith(("-e ", "."))]
             if deps:
                 print(f"  [deps] {example_id}: 检查 pyproject.toml（{len(deps)} deps）…")
-                ok = pip_install(deps)
-                if ok:
-                    _verify_import(search_dir, example_id)
-                    return 0
-                return 1
+                return 0 if pip_install(deps, cwd=search_dir) else 1
         except Exception as e:
             print(f"  [deps] pyproject 解析失败: {e}")
 
     # 模式 3: 内置清单
     pkgs = HARDCODED_DEPS.get(example_id, DEFAULT_DEPS)
     print(f"  [deps] {example_id}: 检查内置清单（{len(pkgs)} 项）…")
-    ok = pip_install(pkgs)
-    if ok:
-        _verify_import(search_dir, example_id)
-        return 0
-    return 1
-
-
-def _verify_import(search_dir: Path, example_id: str):
-    """轻量验证：尝试 import 入口模块，失败仅警告不阻断。"""
-    import importlib
-    candidates = ["web_app", "api_app", "main", "app", "server"]
-    found = None
-    for c in candidates:
-        if (search_dir / f"{c}.py").is_file():
-            found = c
-            break
-    if not found:
-        return
-    try:
-        sys_path_backup = list(sys.path)
-        sys.path.insert(0, str(search_dir))
-        importlib.import_module(found)
-        sys.path[:] = sys_path_backup
-        # import 成功说明依赖完整
-    except ModuleNotFoundError as e:
-        print(f"  [deps] 警告: import {found} 缺 {e.name}，请手动安装")
-    except Exception:
-        # 非 import 错误（DB 连接失败等）→ 可忽略
-        pass
-    finally:
-        sys.path[:] = sys_path_backup
+    return 0 if pip_install(pkgs) else 1
 
 
 if __name__ == "__main__":
