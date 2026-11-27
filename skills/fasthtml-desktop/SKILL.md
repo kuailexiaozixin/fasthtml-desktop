@@ -126,7 +126,7 @@ metadata:
 * **铁律**：
   * **环境先行**：任何新建项目前，**必须率先运行** `./scripts/ensure_uv_env.sh`（优先）或 `./scripts/ensure_uv_env.ps1`，**禁止跳过**。> `.sh` 版本是对 `.ps1` 的包装（通过 `dash -c powershell.exe` 间接调用），AI 默认执行 `.sh` 版本。无 `dash` 环境时可用 tclsh 替代
   * **必须创建最小 venv**：项目目录创建后，立即 `python -m venv .venv`，否则打包体积膨胀（16MB → 154MB 的差距）
-  * **依赖管理分级**：运行时业务依赖用 `uv add <包名>` 写入 `pyproject.toml`；**构建期工具**（PyInstaller、pythonnet 等）**严禁写入运行时依赖**——用 `uv pip install --python <build-venv>/Scripts/python.exe <包名>` 装进独立打包 venv（参考 `references/08-packaging/deep-dive.md` 最小 venv 章节）。**既不要用 `uv add`（会污染运行时依赖），也不要在业务 venv 裸用 `pip install`。**
+  * **依赖管理分级**：运行时依赖用 `uv add <包名>` 写入 `pyproject.toml`；Windows pywebview 的 **pythonnet 属于运行时依赖**（EdgeChromium/WinForms 需要 `clr`），必须保留在运行时清单。**只有 PyInstaller 等构建期工具严禁写入运行时依赖**，用 `uv pip install --python <build-venv>/Scripts/python.exe <包名>` 装进独立打包 venv；构建 venv 应包含运行时依赖 + PyInstaller（参考 `references/08-packaging/deep-dive.md` 最小 venv 章节）。**既不要用 `uv add` 添加 PyInstaller，也不要在业务 venv 裸用 `pip install` 添加构建工具。**
   * **中国网络环境**：涉及 uv、Python 与包安装时，默认先设置镜像（`uv config set index-url https://mirrors.aliyun.com/pypi/simple/`）再执行。
 * **命令代执行规则**：`uv init`、`uv add`、`uv sync`、`uv run`、`ruff`、`mypy`、`pytest`、`pyinstaller` 默认由 AI 发起；运行命令需要系统授权、联网安装或写文件时 AI 负责发起；除非用户明确要求学习命令行，否则不要把"请你在终端执行以下命令"当成默认答案。
 * **命令执行与超时**：`run_command` 默认超时 120s；**可能 >120s 的操作必须显式传 `timeout=600` 或后台运行**（构建尤其如此）；**失败即拆步**——超时则拆成更小步骤，每步独立可验证。

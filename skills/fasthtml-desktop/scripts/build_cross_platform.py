@@ -85,6 +85,8 @@ class AppBuilder:
 
     def check_deps(self) -> None:
         need = ["PyInstaller", "fasthtml", "webview", "uvicorn"]
+        if self.target == "windows":
+            need.append("clr")
         for mod in need:
             r = subprocess.run([sys.executable, "-c", f"import {mod}"], capture_output=True)
             if r.returncode != 0:

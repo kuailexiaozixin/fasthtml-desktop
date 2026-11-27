@@ -23,6 +23,7 @@ onefile、打包态 22 项自动断言 ALL_PASS（2026-07）。
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -72,7 +73,10 @@ class AppBuilder:
         if not self.entry.exists():
             log("FAIL", f"未找到入口：{self.entry}")
             return False
-        for mod in ("PyInstaller", "webview", "fasthtml"):
+        required = ["PyInstaller", "webview", "fasthtml"]
+        if os.name == "nt":
+            required.append("clr")
+        for mod in required:
             if subprocess.run([str(self.python), "-c", f"import {mod}"],
                               capture_output=True).returncode != 0:
                 log("FAIL", f"打包 venv 缺依赖：{mod}（最小 venv 原则：手动装缺的包）")

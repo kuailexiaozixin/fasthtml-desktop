@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2.0.4 (2026-11-27)
+
+### 修复
+- **依赖分级修正**：`pythonnet` 是 Windows 上 pywebview EdgeChromium/WinForms 后端的运行时依赖（提供 `clr`），必须写入 `pyproject.toml` 并随 PyInstaller 打进 EXE；只有 PyInstaller 等构建期工具应隔离在独立打包 venv。SKILL.md 与打包参考文档同步更正。
+- **构建前依赖检查补齐 `clr`**：`build_windows_exe.py` 在 Windows 下检查 `clr`；`build_cross_platform.py` 在 Windows 目标下同样检查，缺依赖时给出明确失败。
+
 ## 2.0.3 (2026-11-27)
 
 ### 修复

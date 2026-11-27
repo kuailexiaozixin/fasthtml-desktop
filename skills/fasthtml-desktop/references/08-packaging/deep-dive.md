@@ -97,12 +97,13 @@ rmdir /s /q .build-venv
 
 ---
 
-## 构建期依赖清单（与运行时依赖分清）
+## 构建 venv 清单（运行时依赖 + 构建工具）
 
 > 铁律见 SKILL.md「依赖管理分级」：**运行时依赖**用 `uv add` 写入 `pyproject.toml`；
-> **构建期工具**（PyInstaller、pythonnet 等）**严禁写入运行时依赖**，用独立打包 venv 装。
+> **PyInstaller 等构建期工具**严禁写入运行时依赖，用独立打包 venv 装。
+> **pythonnet 不是构建期工具**：Windows 的 pywebview EdgeChromium/WinForms 后端运行时需要 `clr`，必须进入运行时清单，并由 PyInstaller 一并收集进 EXE。
 
-构建 venv（`.build-venv`，打包完即删）应只含：
+构建 venv（`.build-venv`，打包完即删）应包含：
 
 | 类别 | 包 | 说明 |
 |------|-----|------|
@@ -110,8 +111,8 @@ rmdir /s /q .build-venv
 | 打包工具 | `PyInstaller` | 仅构建期，不进运行时依赖 |
 | 可选 | 无（界面质检为 pywebview 原生窗口，零额外浏览器依赖） | 界面质检无需额外浏览器 / Chromium |
 
-运行时 `pyproject.toml` 只写业务包（fasthtml / pywebview / 业务库），**不要**出现 `pyinstaller` / `pythonnet`。
-构建期依赖用 `uv pip install --python .build-venv/Scripts/python.exe <包>` 装进独立打包 venv。
+运行时 `pyproject.toml` 写业务包 + `fasthtml` / `pywebview` / `pythonnet` 等运行时依赖，**不要**出现 `pyinstaller`。
+构建工具用 `uv pip install --python .build-venv/Scripts/python.exe <包>` 装进独立打包 venv。
 
 ---
 
