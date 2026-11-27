@@ -7,30 +7,35 @@
 特点：
     - uvicorn reload=True，代码修改后自动重载
     - 不启动 pywebview 窗口，直接在浏览器预览
-    - 热更新速度快于 pywebview 窗口刷新
 
 打包前切换到：
-    uv run python src/main.py  # pywebview 桌面模式
+    python src/main.py  # pywebview 桌面模式
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+import os
+import sys
 
-# 自动检测包结构：扁平 / 嵌套
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 try:
     from app import app
 except ImportError:
-    _src_dir = os.path.dirname(__file__)
-    _pkgs = [d for d in os.listdir(_src_dir)
-             if os.path.isdir(os.path.join(_src_dir, d)) and not d.startswith("_")]
-    if _pkgs:
-        mod = __import__(f"{_pkgs[0]}.app", fromlist=["app"])
-        app = getattr(mod, "app")
-    else:
-        raise ImportError("未找到 app 模块")
+    package = None
+    for name in sorted(os.listdir(SRC_DIR)):
+        candidate = os.path.join(SRC_DIR, name)
+        if os.path.isdir(candidate) and not name.startswith("_") \
+                and os.path.isfile(os.path.join(candidate, "app.py")):
+            package = name
+            break
+    if package is None:
+        raise ImportError("未找到 app 模块：检查 src/app.py 或 src/<pkg>/app.py")
+    module = __import__(f"{package}.app", fromlist=["app"])
+    app = getattr(module, "app")
 
 if __name__ == "__main__":
     import uvicorn
-    PORT = int(os.environ.get("PORT", 5001))
-    print(f"[DEV] 开发模式: http://127.0.0.1:{PORT}")
+    port = int(os.environ.get("PORT", 5001))
+    print(f"[DEV] 开发模式: http://127.0.0.1:{port}")
     print("[DEV] 代码修改后自动重载 (Ctrl+C 停止)")
-    uvicorn.run(app, host="127.0.0.1", port=PORT, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=port, reload=True)

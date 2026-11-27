@@ -51,6 +51,17 @@ check_feature "signal.SIGINT"      "signal.SIGINT"
 check_feature "双包导入try/except" "except ImportError"
 check_feature "_src路径注入"       'sys.path.insert.*_src'
 
+# shared/main.py 是入口模板唯一真源；蓝图副本只允许标题占位差异。
+SHARED_RENDERED="$(mktemp)"
+sed 's/__APP_TITLE__/{{APP_NAME}}/' "$SHARED" > "$SHARED_RENDERED"
+if cmp -s "$SHARED_RENDERED" "$TMPL"; then
+  echo "  OK shared/main.py 与蓝图 main.py.tmpl 完全一致"
+else
+  echo "  MISMATCH shared/main.py 与蓝图 main.py.tmpl 内容不一致"
+  inc_err
+fi
+rm -f "$SHARED_RENDERED"
+
 # 3. 检查所有示例的 main.py 是否与 shared/main.py 一致（比较关键行数）
 SHARED_LEN=$(grep -c "def \|import " "$SHARED" 2>/dev/null || true)
 for ex_dir in "$EXAMPLES_DIR"/*/; do

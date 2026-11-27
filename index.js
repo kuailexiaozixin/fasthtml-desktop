@@ -1,27 +1,22 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { BUNDLED_SKILL_RANK } from "@deepseek-ai/dsh-skill";
 
 // Distributable `fasthtml-desktop` skill provider for DeepSeek Harness.
-//
-// This is the embedded-provider pattern used by the official
-// `@deepseek-ai/dsh-skill-badge` plugin, made SELF-CONTAINED so it can be
-// published to npm and installed by anyone. The npm package IS the full skill
-// repository (references/, scripts/, examples/, docs/, templates/, ...),
-// so resourceBase points at the package root: every relative path the SKILL.md
-// body cites resolves inside the installed package, with no dependency on the
-// publisher's machine or repo location.
+// The published npm package keeps the skill under skills/fasthtml-desktop/,
+// while the local skill checkout keeps it at the repository root.
 
 const PROVIDER_NAME = "fasthtml-desktop";
-
-// SKILL.md lives at the package root (same as the skill repo root).
-const SKILL_BODY_URL = new URL("./SKILL.md", import.meta.url);
-
-// resourceBase = package root, so references/..., scripts/..., examples/...
-// resolve inside the installed npm package.
+const NESTED_SKILL = new URL("./skills/fasthtml-desktop/SKILL.md", import.meta.url);
+const LOCAL_SKILL = new URL("./SKILL.md", import.meta.url);
+const SKILL_BODY_URL = existsSync(NESTED_SKILL) ? NESTED_SKILL : LOCAL_SKILL;
+const SKILL_ROOT = existsSync(NESTED_SKILL)
+  ? new URL("./skills/fasthtml-desktop/", import.meta.url)
+  : new URL("./", import.meta.url);
 const RESOURCE_BASE = {
   kind: "directory",
-  path: fileURLToPath(new URL("./", import.meta.url)),
+  path: fileURLToPath(SKILL_ROOT),
 };
 
 const CANDIDATE = {

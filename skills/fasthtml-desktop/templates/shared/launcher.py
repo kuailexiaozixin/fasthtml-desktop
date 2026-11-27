@@ -61,7 +61,7 @@ _DEFAULTS = {
     "install_note": "",       # auto_install=false 时展示给用户的说明
     "startup_note": "",       # 启动前的额外提示（如需要 API Key）
     "side_processes": [],     # 伴随子进程：[{cmd:[...], cwd:".", wait_port:int, wait_timeout:30}]
-    "pip_index": "https://pypi.tuna.tsinghua.edu.cn/simple",
+    "pip_index": "https://mirrors.aliyun.com/pypi/simple/",
 }
 
 

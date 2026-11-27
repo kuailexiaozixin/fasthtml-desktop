@@ -1,6 +1,6 @@
 # Machine-local, regenerable, or fetch-on-demand content — never ship inside the npm package.
 # npm applies these rules inside the package.json "files" allowlist.
-# examples/: only the README + check_deps placeholders ship; the 25 upstream snapshots
+# examples/: only the README + check_deps placeholders ship; upstream snapshots
 # are pulled on first use by scripts/sync_upstream.py --ensure (sources in manifest.json),
 # mirroring the Git repository convention.
 
@@ -9,10 +9,10 @@
 .gitattributes
 .github/
 
-# examples: 25 upstream snapshots are NOT shipped (63.5 MB = 97.8% of the old package).
+# examples: upstream snapshots are NOT shipped.
 # Only examples/README.md + examples/check_deps.py ship; on first use run
 #   python scripts/sync_upstream.py --ensure
-# which pulls all 25 snapshots (declared in manifest.json -> sources).
+# which pulls all tracked snapshots (declared in manifest.json -> sources).
 examples/FastAccounts/
 examples/FastBI/
 examples/FastBot/
@@ -89,3 +89,9 @@ node_modules/
 .DS_Store
 **/.DS_Store
 Thumbs.db
+
+# Skill subtree repository metadata
+**/.github/
+**/.gitignore
+**/.gitattributes
+**/.npmignore

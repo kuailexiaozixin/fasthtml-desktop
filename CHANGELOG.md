@@ -1,5 +1,13 @@
 # 变更记录
 
+## 2.0.3 (2026-11-27)
+
+### 修复
+- **DSH npm 包未包含技能内容**：此前 npm tarball 只带根级元文件，`skills/fasthtml-desktop/`、templates 与 references 均缺失；现调整 `files` 白名单和 `index.js` 的 `resourceBase`，npm 包可自包含技能。
+- **bootstrap 生成器未充分使用模板**：改为消费 `.env.example`、`.gitignore`、`pyproject`、`dev_main`、requirements、README、启动器与 hook 模板；生成的 Python 文件统一 UTF-8 无 BOM。
+- **嵌套包模板错误**：修正蓝图 `main.py` 的 `str/Path` 混用，平铺与嵌套包项目均可启动。
+- **依赖与入口约定**：生成依赖补充 `requests`；启动器默认镜像改为可用的 Aliyun；移除未使用的 calculator 样例和 inline-css 模板。
+
 ## 2.0.1 (2026-11-10)
 
 ### 修复

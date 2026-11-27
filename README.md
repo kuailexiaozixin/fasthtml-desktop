@@ -14,8 +14,8 @@
 本技能为 AI Agent 提供一套**标准化、可复现**的 FastHTML 桌面应用开发流程，用 Web 技术栈做出带原生窗口的桌面程序：
 
 - **Web 技术栈做桌面**：FastHTML + HTMX 构建界面，pywebview 提供原生窗口（WebView2 渲染）
-- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`（约 1 万行官方上下文）为写码前必读
-- **23 个参考实现**：`examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务、CRM、数据治理等真实业务场景）
+- **权威文档 HARD-GATE**：`references/05-coding/fasthtml-refs/fasthtml-llms-ctx-full.txt`为写码前必读
+- **参考实现**：`examples/` 为 FastOffice 套件（ERP、财务、HRM、BI、文档、表格、法务、CRM、数据治理等真实业务场景）
 - **完整质量门禁**：路由联动检查、引用检查、无头 UI 验证、release gate
 - **跨平台构建**：Windows / macOS / Linux 构建脚本齐全
 
@@ -74,7 +74,7 @@ dsh plugin --profile web add dsh-fasthtml-desktop
 
 本技能已发布为 [DeepSeek Harness (dsh)](https://deepseek-ai.github.io/deepseek-harness/) 的 **Cordis Bundle** 插件 **`dsh-fasthtml-desktop`**（npm 包，网络上的任何人均可在其 dsh 中直接安装）。插件把技能注册进 dsh 的 `ctx.skills`，让 dsh Agent 在会话中通过 `skill` 工具加载使用。**形态**为 Cordis Bundle（Host 侧），**类型**为 skill 插件（嵌入式提供方，参照官方 `dsh-skill-badge`）。
 
-本插件为**自包含**的可分发 npm 包：npm 包根 = 技能仓库根，`resourceBase` 指向包根，SKILL.md 及其引用的 references/、examples/ 等资源全部随包安装，不依赖发布者的机器或仓库位置。
+本插件为**自包含**的可分发 npm 包：技能本体位于包内 `skills/fasthtml-desktop/`，`index.js` 将该目录作为 `resourceBase`；SKILL.md 及其引用的 references/、templates/、examples/ 等资源全部随包安装，不依赖发布者的机器或仓库位置。
 
 ### 安装（命令行，从 npm 分发）
 
@@ -153,12 +153,12 @@ fasthtml-desktop/                # 仓库根
 │       ├── LICENSE              # MIT 许可证
 │       ├── README.md            # 本文件
 │       ├── references/          # 深度参考（按工作流①→⑨编号）
-│       │   ├── 02-architecture/ # ② 架构设计（18 章 + 模块设计）
-│       │   ├── 05-coding/       # ⑤ 编码（含 fasthtml-refs/ 官方上下文、pywebview-examples/）
+│       │   ├── 02-architecture/ # ② 架构设计（指南 + 模块设计）
+│       │   ├── 05-coding/       # ⑤ 编码（含 fasthtml-refs/ 官方上下文）
 │       │   ├── 07-quality-gate/ # ⑦ 质量门禁（Check/Test/Debug 三层）
-│       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台 + 7 子专题）
+│       │   ├── 08-packaging/    # ⑧ 打包（深度指南 + 跨平台专题）
 │       │   └── ...
-│       ├── examples/            # 23 个参考实现（FastOffice 套件，优先参考）
+│       ├── examples/            # 参考实现（FastOffice 套件，优先参考）
 │       │   ├── FastERP          # ERP（订单到收款/采购到付款/会计引擎）
 │       │   ├── FastAccounts     # 财务总账（复式记账）
 │       │   ├── FastBI           # BI 分析平台（RAG 问答）
@@ -167,13 +167,15 @@ fasthtml-desktop/                # 仓库根
 │       │   └── ...              # 完整列表见 examples/README.md
 │       ├── templates/           # 项目脚手架模板
 │       ├── scripts/             # 构建、校验、门禁自动化脚本
-│       ├── docs/                # 交付清单、术语表、排障
-│       ├── package.json         # npm 包声明（dsh-fasthtml-desktop，Cordis Bundle）
-│       ├── index.js             # 嵌入式 skill 提供方
-│       └── cordis.patch.yml     # dsh bundle patch（注册插件）
-├── .github/workflows/ci.yml     # gh skill publish --dry-run + 目录结构校验
+│       └── docs/                # 交付清单、术语表、排障
+├── index.js                     # dsh Cordis provider（resourceBase → skills/fasthtml-desktop/）
+├── package.json                 # npm 包声明（dsh-fasthtml-desktop）
+├── cordis.patch.yml             # dsh bundle patch（注册插件）
+├── locale/{en,zh}.json          # dsh 插件标题与简介
+├── icon.svg                     # dsh 插件图标
+├── .github/workflows/           # CI 与 npm Trusted Publishing
 ├── .gitattributes               # 强制 .bat 以 CRLF 分发
-└── README.md                    # 仓库级说明（本文件为技能内说明）
+└── README.md                    # 仓库级说明（本文件）
 ```
 
 ---
@@ -203,7 +205,7 @@ fasthtml-desktop/                # 仓库根
 
 ## 第三方内容与合规
 
-`examples/` 目录下的参考实现为 **FastOffice 套件 23 个项目**，均来自 Predictive Labs（`predictivelabsai` 组织）（FastERP 等 20 个项目 MIT、FastVC Apache-2.0、FastLegal AGPL-3.0、FastWiki 无声明）。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`examples/` 目录下的参考实现来自 Predictive Labs（`predictivelabsai` 组织）的 FastOffice 套件。完整来源、许可证与使用注意详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
 

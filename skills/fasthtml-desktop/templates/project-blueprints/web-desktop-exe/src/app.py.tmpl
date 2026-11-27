@@ -15,7 +15,7 @@ app, rt = fast_app(
 )
 
 
-@rt
+@rt("/")
 def index():
     """首页"""
     return Titled("{{APP_NAME}}",
@@ -25,3 +25,9 @@ def index():
             cls="container"
         )
     )
+
+
+@rt("/healthz")
+def healthz():
+    """无头/打包冒烟检查端点。"""
+    return {"ok": True}

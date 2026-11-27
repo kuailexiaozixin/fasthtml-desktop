@@ -20,7 +20,7 @@
 启动.bat server     # 可选：仅启动本地 HTTP 服务（无头 / CI 模式，不建窗口）
 ```
 
-> ⚠️ 注意：`.py` 文件（main.py / start.py 等）双击默认会用编辑器打开、**不会运行**。用户入口统一是 **`启动.bat`**；`start.py` 等仅供开发者在终端使用（质量门禁、无头调试）。
+> ⚠️ 注意：`.py` 文件（main.py / dev_main.py 等）双击默认会用编辑器打开、**不会运行**。用户入口统一是 **`启动.bat`**；`dev_main.py` 等仅供开发者在终端使用。
 
 ### 退出方式
 关闭桌面窗口，或在控制台按 `Ctrl+C`。
@@ -42,6 +42,8 @@
 ```
 {{APP_NAME}}/
 ├── 启动.bat                      # 一键启动器（用户入口，双击即用）
+├── launcher.py                   # 启动决策层（建 venv / 预检 / 依赖安装）
+├── launcher.json                 # 启动配置
 ├── requirements.txt              # 运行依赖（启动.bat 自动 pip 安装）
 ├── pyproject.toml               # 项目配置（uv 开发用）
 ├── .env.example                 # 配置样例（PORT 等）
@@ -49,6 +51,7 @@
 ├── src/
 │   ├── main.py                  # pywebview + uvicorn 入口（不动）
 │   ├── app.py                   # 业务逻辑（在这里写页面 / 路由）
+│   ├── dev_main.py              # 可选：开发热重载入口（bootstrap -DevMode）
 │   ├── __init__.py
 │   └── pyinstaller_hooks/       # 打包钩子
 ├── tests/                       # pytest 测试
@@ -67,10 +70,11 @@ python-fasthtml>=0.6.0
 pywebview>=5.0
 pythonnet>=3.0
 uvicorn>=0.30
+requests>=2.31
 ```
 
 ### 打包要点（开发者重新分发时）
-- 最小 venv + `--onefile --noupx --console`；`--collect-submodules fasthtml`；pywebview 6.2.1 自带 hook 自动收集 `webview/lib`，无需手动 `--add-data`。
+- 最小 venv + `--onefile --noupx --console`；`--collect-submodules fasthtml`；pywebview 自带 hook 自动收集 `webview/lib`，无需手动 `--add-data`。
 - Windows hidden-import：`clr` + `webview.platforms.winforms` + `webview.platforms.edgechromium`。
 - 函数内懒加载模块须显式 `--hidden-import`。
 - 构建后必须冒烟：启动 EXE → HTTP 200 → 窗口句柄存在 → （若有后台子进程）业务健康端点可达。
